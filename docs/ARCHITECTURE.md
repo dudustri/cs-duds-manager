@@ -1,7 +1,6 @@
 # Architecture
 
-Local stack (PLAN Phases 0–4), matching `.claude-pipeline/browser-cs-local/design.md`. Where
-they differ, that file is authoritative.
+How the parts fit together. `PLAN.md` explains the choices behind them.
 
 ## Components
 
@@ -18,10 +17,10 @@ flowchart LR
 
     subgraph Host["host network (docker compose, network_mode: host)"]
         subgraph CaddyC["caddy container"]
-            Caddy["Caddy :80<br/>static page + /assets (immutable)<br/>proxy /api/* → 127.0.0.1:8080"]
+            Caddy["Caddy :80<br/>static page + /assets (immutable)<br/>proxy /api/* to 127.0.0.1:8080"]
         end
 
-        subgraph Backend["backend container — one Go binary cs-backend"]
+        subgraph Backend["backend container: one Go binary cs-backend"]
             API["api<br/>REST /api/*<br/>host token · admin cookie · rate limits"]
             Relay["relay<br/>ICE-lite pion on UDP 27101<br/>one unreliable 'game' channel"]
             Rooms["room.Manager<br/>single owner of rooms + ports<br/>supervisor goroutine per room"]
@@ -31,14 +30,14 @@ flowchart LR
                 R3["room C<br/>gungame"]
             end
             API --> Rooms
-            API -- "POST /session → Accept(Target)" --> Relay
+            API -- "POST /session to Accept(Target)" --> Relay
             Rooms -- "spawn · RCON status/kick/votemap · stop" --> HLDS
         end
     end
 
     UI -- "/api" --> Caddy
     Assets -- "/assets/sha256.pk3" --> Caddy
-    Transport -- "POST /api/rooms/{id}/session<br/>SDP offer → answer" --> Caddy
+    Transport -- "POST /api/rooms/{id}/session<br/>SDP offer to answer" --> Caddy
     Caddy --> API
     Transport <-- "WebRTC data channel<br/>UDP 27101 (PUBLIC_IP = LAN IP)" --> Relay
     Relay <-- "connected UDP socket<br/>from 127.10.x.y per player" --> HLDS
