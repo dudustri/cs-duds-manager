@@ -93,9 +93,13 @@ function read(): Record<string, string> {
 export const hostTokens = {
   get: (roomId: string): string | undefined => read()[roomId],
   set(roomId: string, token: string): void {
-    memory[roomId] = token;
+    // keep the newest 20 (insertion order); older rooms are long gone, their tokens are dead weight
+    const all = Object.entries(read()).filter(([id]) => id !== roomId);
+    const kept = Object.fromEntries([...all.slice(-19), [roomId, token]]);
+    for (const id of Object.keys(memory)) delete memory[id];
+    Object.assign(memory, kept);
     try {
-      localStorage.setItem(KEY, JSON.stringify(read()));
+      localStorage.setItem(KEY, JSON.stringify(kept));
     } catch {
       /* memory only */
     }
