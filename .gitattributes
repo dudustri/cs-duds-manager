@@ -1,0 +1,3 @@
+# The vendored GunGame plugin source is large; keep it out of the language stats.
+server-config/amxx/gungame.sma linguist-vendored
+server-config/amxx/gungame.txt linguist-vendored
