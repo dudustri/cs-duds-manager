@@ -38,6 +38,8 @@ func TestLoadCatalogProbe(t *testing.T) {
 	mode := func(name, cfg string) {
 		os.MkdirAll(filepath.Join(dir, "modes", name), 0o755)
 		os.WriteFile(filepath.Join(dir, "modes", name, "mode.cfg"), []byte(cfg), 0o644)
+		os.MkdirAll(filepath.Join(dir, "addons/amxmodx/configs/modes"), 0o755)
+		os.WriteFile(filepath.Join(dir, pluginList(name)), nil, 0o644)
 	}
 	manifest := filepath.Join(dir, "manifest.json")
 	os.WriteFile(manifest, []byte(`{"maps":{"de_dust2":{}}}`), 0o644)
@@ -54,5 +56,14 @@ func TestLoadCatalogProbe(t *testing.T) {
 		if _, err := LoadCatalog(manifest, filepath.Join(dir, "modes")); err == nil {
 			t.Errorf("%s: LoadCatalog accepted %q", name, cfg)
 		}
+	}
+	mode("bad", "a 1 // probe\n")
+	os.Remove(filepath.Join(dir, pluginList("bad")))
+	if _, err := LoadCatalog(manifest, filepath.Join(dir, "modes")); err == nil {
+		t.Error("LoadCatalog accepted a mode without its plugin list")
+	}
+	os.Remove(filepath.Join(dir, "modes", "bad", "mode.cfg"))
+	if _, err := LoadCatalog(manifest, filepath.Join(dir, "modes")); err == nil {
+		t.Error("LoadCatalog accepted a mode directory without mode.cfg")
 	}
 }

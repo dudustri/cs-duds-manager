@@ -106,6 +106,8 @@ func start(t *testing.T, mods ...func(*spec)) *harness {
 		dst := filepath.Join(hldsDir, "cstrike", "modes", m)
 		os.MkdirAll(dst, 0o755)
 		os.WriteFile(filepath.Join(dst, "mode.cfg"), b, 0o644)
+		os.MkdirAll(filepath.Join(hldsDir, "cstrike/addons/amxmodx/configs/modes"), 0o755)
+		os.WriteFile(filepath.Join(hldsDir, "cstrike/addons/amxmodx/configs/modes", m+".ini"), nil, 0o644)
 	}
 	hash, _ := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.MinCost)
 	h := &harness{ports: freePorts(t, 3), client: &http.Client{Timeout: 40 * time.Second}, hldsDir: hldsDir}

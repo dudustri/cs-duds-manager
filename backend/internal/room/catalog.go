@@ -28,7 +28,8 @@ type Catalog struct {
 }
 
 // LoadCatalog reads map names from manifest.json and modes from modesDir/*/mode.cfg. Each
-// mode.cfg must have exactly one line ending in `// probe`, e.g. `mp_forcerespawn 1 // probe`.
+// mode.cfg must have exactly one line ending in `// probe`, e.g. `mp_forcerespawn 1 // probe`, and each mode
+// needs its plugin list (see pluginList).
 func LoadCatalog(manifestPath, modesDir string) (*Catalog, error) {
 	b, err := os.ReadFile(manifestPath)
 	if err != nil {
@@ -52,12 +53,19 @@ func LoadCatalog(manifestPath, modesDir string) (*Catalog, error) {
 		return nil, err
 	}
 	for _, d := range dirs {
-		cfg, err := os.ReadFile(filepath.Join(modesDir, d.Name(), "mode.cfg"))
-		if err != nil {
+		if !d.IsDir() {
 			continue
 		}
 		if !nameRe.MatchString(d.Name()) {
 			return nil, fmt.Errorf("bad mode name %q", d.Name())
+		}
+		cfg, err := os.ReadFile(filepath.Join(modesDir, d.Name(), "mode.cfg"))
+		if err != nil {
+			return nil, fmt.Errorf("mode %s: %w", d.Name(), err)
+		}
+		// the build generates it; without it hlds would start with the wrong plugins and fail only at runtime
+		if _, err := os.Stat(filepath.Join(modesDir, "..", pluginList(d.Name()))); err != nil {
+			return nil, fmt.Errorf("mode %s: plugin list: %w", d.Name(), err)
 		}
 		cvar, val, err := parseProbe(string(cfg))
 		if err != nil {
@@ -70,6 +78,9 @@ func LoadCatalog(manifestPath, modesDir string) (*Catalog, error) {
 	}
 	return c, nil
 }
+
+// pluginList is the mode's AMXX plugin list, relative to the game dir (cstrike/, the parent of modesDir).
+func pluginList(mode string) string { return "addons/amxmodx/configs/modes/" + mode + ".ini" }
 
 func parseProbe(cfg string) (cvar, val string, err error) {
 	n := 0

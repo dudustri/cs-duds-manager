@@ -455,7 +455,7 @@ func launchArgs(port int, mode Mode, mp Map, rconPassword string, maxPlayers int
 	return []string{
 		"-game", "cstrike", "-port", strconv.Itoa(port), "-sport", strconv.Itoa(port + 10000), "-maxplayers", strconv.Itoa(maxPlayers),
 		"+ip", "127.0.0.1", "+rcon_password", rconPassword, "+sv_rcon_condebug", "0",
-		"+localinfo", "amxx_plugins", "addons/amxmodx/configs/modes/" + mode.name + ".ini",
+		"+localinfo", "amxx_plugins", pluginList(mode.name),
 		"+localinfo", "amxx_configsdir", roomConfigsRel(id),
 		"+mapchangecfgfile", "modes/" + mode.name + "/mode.cfg", "+map", mp.name,
 	}
