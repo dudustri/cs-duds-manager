@@ -22,6 +22,7 @@ type Map struct{ name string }
 type Mode struct {
 	name, probeCvar, probeVal string
 	options                   []Option
+	prefixes                  []string // modes/<mode>/maps.txt: the maps it is made for; none = the general maps
 }
 
 // Option is one room setting: a server cvar and the only values it may take.
@@ -33,7 +34,16 @@ type Option struct {
 }
 
 // Settings are validated option values, ready for the room's argv; only Mode.Settings mints them.
-type Settings struct{ s string }
+type Settings struct {
+	s      string
+	labels []Setting
+}
+
+// Setting is one option as the lobby shows it ("Round time", "3 min").
+type Setting struct {
+	Label string `json:"label"`
+	Value string `json:"value"`
+}
 
 var (
 	cvarRe  = regexp.MustCompile(`^[a-z_]{1,32}$`)
@@ -47,22 +57,70 @@ func (m Mode) Options() []Option { return m.options }
 // on '/'). An unknown option or value is an error.
 func (m Mode) Settings(req map[string]string) (Settings, error) {
 	parts := make([]string, 0, len(m.options))
+	var labels []Setting
 	for _, o := range m.options {
 		v, ok := req[o.Cvar]
 		if !ok {
 			v = o.Default
 		}
-		if !slices.ContainsFunc(o.Values, func(p [2]string) bool { return p[0] == v }) {
+		i := slices.IndexFunc(o.Values, func(p [2]string) bool { return p[0] == v })
+		if i < 0 {
 			return Settings{}, fmt.Errorf("%s: %q is not one of its values", o.Cvar, v)
 		}
 		parts = append(parts, o.Cvar+"/"+v)
+		labels = append(labels, Setting{o.Label, o.Values[i][1]})
 	}
 	for k := range req {
 		if !slices.ContainsFunc(m.options, func(o Option) bool { return o.Cvar == k }) {
 			return Settings{}, fmt.Errorf("mode %s has no option %q", m.name, k)
 		}
 	}
-	return Settings{strings.Join(parts, "/")}, nil
+	return Settings{strings.Join(parts, "/"), labels}, nil
+}
+
+// loadPrefixes reads a mode's map name prefixes, one per line ('#' comments); a missing file means none.
+func loadPrefixes(path string) ([]string, error) {
+	b, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	var out []string
+	for _, l := range strings.Split(string(b), "\n") {
+		if l, _, _ = strings.Cut(l, "#"); strings.TrimSpace(l) == "" {
+			continue
+		}
+		l = strings.TrimSpace(l)
+		if !nameRe.MatchString(l) {
+			return nil, fmt.Errorf("bad prefix %q", l)
+		}
+		out = append(out, l)
+	}
+	return out, nil
+}
+
+// Fits says whether mp is played in mode: a mode with prefixes takes only its own maps; the others take every map
+// no mode claims (a surf map is surf only, and surf shows nothing else).
+func (c *Catalog) Fits(mode Mode, mp Map) bool {
+	has := func(ps []string) bool {
+		return slices.ContainsFunc(ps, func(p string) bool { return strings.HasPrefix(mp.name, p) })
+	}
+	if len(mode.prefixes) > 0 {
+		return has(mode.prefixes)
+	}
+	return !has(c.special)
+}
+
+// MapsFor lists the catalog maps that fit mode, sorted.
+func (c *Catalog) MapsFor(mode Mode) []string {
+	var out []string
+	for _, n := range c.Maps() {
+		if c.Fits(mode, c.maps[n]) {
+			out = append(out, n)
+		}
+	}
+	return out
 }
 
 func loadOptions(path string) ([]Option, error) {
@@ -92,8 +150,9 @@ func (m Map) String() string  { return m.name }
 func (m Mode) String() string { return m.name }
 
 type Catalog struct {
-	maps  map[string]Map
-	modes map[string]Mode
+	maps    map[string]Map
+	modes   map[string]Mode
+	special []string // every mode's map prefixes: maps the general modes leave out
 }
 
 // LoadCatalog reads map names from manifest.json and modes from modesDir/*/mode.cfg. Each
@@ -144,7 +203,12 @@ func LoadCatalog(manifestPath, modesDir string) (*Catalog, error) {
 		if err != nil {
 			return nil, fmt.Errorf("mode %s: options.json: %w", d.Name(), err)
 		}
-		c.modes[d.Name()] = Mode{d.Name(), cvar, val, opts}
+		prefixes, err := loadPrefixes(filepath.Join(modesDir, d.Name(), "maps.txt"))
+		if err != nil {
+			return nil, fmt.Errorf("mode %s: maps.txt: %w", d.Name(), err)
+		}
+		c.modes[d.Name()] = Mode{d.Name(), cvar, val, opts, prefixes}
+		c.special = append(c.special, prefixes...)
 	}
 	if len(c.maps) == 0 || len(c.modes) == 0 {
 		return nil, fmt.Errorf("catalog: %d maps, %d modes", len(c.maps), len(c.modes))

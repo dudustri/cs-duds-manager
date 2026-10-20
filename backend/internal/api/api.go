@@ -82,6 +82,7 @@ func New(cfg Config) (*Server, error) {
 	rand.Read(s.adminKey[:])
 	s.mux.HandleFunc("GET /api/catalog", s.catalog)
 	s.mux.HandleFunc("GET /api/rooms", s.listRooms)
+	s.mux.HandleFunc("GET /api/players", s.onlinePlayers)
 	s.mux.HandleFunc("POST /api/rooms", s.createRoom)
 	s.mux.HandleFunc("DELETE /api/rooms/{id}", s.deleteRoom)
 	s.mux.HandleFunc("GET /api/rooms/{id}/players", s.players)
@@ -125,11 +126,35 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 
 func (s *Server) catalog(w http.ResponseWriter, r *http.Request) {
 	opts := map[string][]room.Option{}
+	modeMaps := map[string][]string{}
 	for _, name := range s.cat.Modes() {
 		m, _ := s.cat.Mode(name)
 		opts[name] = m.Options()
+		modeMaps[name] = s.cat.MapsFor(m)
 	}
-	writeJSON(w, 200, map[string]any{"maps": s.cat.Maps(), "modes": s.cat.Modes(), "options": opts})
+	writeJSON(w, 200, map[string]any{"maps": s.cat.Maps(), "modes": s.cat.Modes(), "options": opts, "modeMaps": modeMaps})
+}
+
+// onlinePlayers lists every human in every room, from the last status poll: names and frags only (no ids, addresses).
+func (s *Server) onlinePlayers(w http.ResponseWriter, r *http.Request) {
+	type online struct {
+		Name  string `json:"name"`
+		Frags int    `json:"frags"`
+		Room  string `json:"room"`
+		Map   string `json:"map"`
+		Mode  string `json:"mode"`
+	}
+	out := []online{}
+	for _, info := range s.rooms.List() {
+		rm, ok := s.rooms.Get(info.ID)
+		if !ok {
+			continue
+		}
+		for _, p := range rm.Online() {
+			out = append(out, online{p.Name, p.Frags, info.ID, info.Map, info.Mode})
+		}
+	}
+	writeJSON(w, 200, out)
 }
 
 func (s *Server) listRooms(w http.ResponseWriter, r *http.Request) {
@@ -141,6 +166,7 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 		Map, Mode  string
 		MaxPlayers *int              // optional; a non-integer fails the decode
 		Options    map[string]string // optional; cvar -> one of the mode's values (GET /api/catalog lists them)
+		Host       string            // optional; the creator's player name, shown in the room list
 	}
 	if !decode(w, r, &req) {
 		return
@@ -162,6 +188,10 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "unknown_mode", "unknown mode")
 		return
 	}
+	if !s.cat.Fits(mode, mp) {
+		writeErr(w, 400, "map_not_for_mode", "that map is not played in this mode")
+		return
+	}
 	set, err := mode.Settings(req.Options)
 	if err != nil {
 		writeErr(w, 400, "bad_option", err.Error())
@@ -178,7 +208,7 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 429, "too_many_rooms", "you already have the maximum number of rooms running")
 		return
 	}
-	rm, err := s.rooms.Create(r.Context(), mp, mode, maxPlayers, set)
+	rm, err := s.rooms.Create(r.Context(), mp, mode, maxPlayers, set, displayName(req.Host), s.cat.MapsFor(mode))
 	if err == nil {
 		s.createLm.allow(ip)
 		s.creatorsMu.Lock()
@@ -228,6 +258,21 @@ func (s *Server) deleteRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(204)
+}
+
+// displayName keeps a player name printable and short (it is shown, never executed): no control characters,
+// quotes or backslashes, at most 31 characters like the engine's own limit.
+func displayName(s string) string {
+	s = strings.Map(func(r rune) rune {
+		if r < 0x20 || r == 0x7f || strings.ContainsRune("\"';\\", r) {
+			return -1
+		}
+		return r
+	}, s)
+	if r := []rune(strings.TrimSpace(s)); len(r) > 31 {
+		return string(r[:31])
+	}
+	return strings.TrimSpace(s)
 }
 
 // role is what the caller may do in a room, in increasing order.
@@ -319,15 +364,15 @@ func (s *Server) voteMap(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &req) {
 		return
 	}
-	maps, ok := s.voteMaps(w, req.Maps)
+	maps, ok := s.voteMaps(w, req.Maps, rm.Mode)
 	if !ok {
 		return
 	}
 	writeVote(w, rm.VoteMap(r.Context(), maps))
 }
 
-// voteMaps turns 1-4 distinct catalog names into maps, or answers 400.
-func (s *Server) voteMaps(w http.ResponseWriter, names []string) ([]room.Map, bool) {
+// voteMaps turns 1-4 distinct catalog names that fit the room's mode into maps, or answers 400.
+func (s *Server) voteMaps(w http.ResponseWriter, names []string, mode room.Mode) ([]room.Map, bool) {
 	if len(names) < 1 || len(names) > 4 {
 		writeErr(w, 400, "bad_request", "vote for 1 to 4 maps")
 		return nil, false
@@ -342,6 +387,10 @@ func (s *Server) voteMaps(w http.ResponseWriter, names []string) ([]room.Map, bo
 		}
 		if seen[n] {
 			writeErr(w, 400, "bad_request", "duplicate map")
+			return nil, false
+		}
+		if !s.cat.Fits(mode, mp) {
+			writeErr(w, 400, "map_not_for_mode", "that map is not played in this mode")
 			return nil, false
 		}
 		seen[n] = true
@@ -388,7 +437,7 @@ func (s *Server) votes(w http.ResponseWriter, r *http.Request) {
 	}
 	switch req.Kind {
 	case "map":
-		if maps, ok := s.voteMaps(w, req.Maps); ok {
+		if maps, ok := s.voteMaps(w, req.Maps, rm.Mode); ok {
 			writeVote(w, rm.VoteMap(r.Context(), maps))
 		}
 	case "kick":

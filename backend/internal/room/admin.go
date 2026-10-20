@@ -27,7 +27,8 @@ const hostAdminLine = `"%s" "" "bcefju" "de"`
 
 func roomConfigsRel(id string) string { return "addons/amxmodx/rooms/" + id }
 
-// mkConfigs gives the room its own AMXX configs dir: symlinks to the stock files plus its own users.ini.
+// mkConfigs gives the room its own AMXX configs dir: symlinks to the stock files plus its own users.ini, and its
+// mode's maps as maps.ini (AMXX map menus and votes) and mapcycle.txt (+mapcyclefile: rtv, nextmap).
 func (m *Manager) mkConfigs(r *Room) error {
 	if err := os.MkdirAll(r.cfgDir, 0o755); err != nil {
 		return err
@@ -38,11 +39,19 @@ func (m *Manager) mkConfigs(r *Room) error {
 	}
 	es, _ := os.ReadDir(stock) // absent in tests
 	for _, e := range es {
-		if e.Name() == "users.ini" {
+		if e.Name() == "users.ini" || e.Name() == "maps.ini" {
 			continue
 		}
 		if err := os.Symlink(filepath.Join(stock, e.Name()), filepath.Join(r.cfgDir, e.Name())); err != nil {
 			return err
+		}
+	}
+	if len(r.maps) > 0 {
+		list := []byte(strings.Join(r.maps, "\n") + "\n")
+		for _, f := range []string{"maps.ini", "mapcycle.txt"} {
+			if err := os.WriteFile(filepath.Join(r.cfgDir, f), list, 0o644); err != nil {
+				return err
+			}
 		}
 	}
 	r.sess.mu.Lock()

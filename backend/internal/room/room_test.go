@@ -81,3 +81,31 @@ func TestLogWriterBoundsUnterminatedOutput(t *testing.T) {
 		t.Fatalf("log: %s", out.String())
 	}
 }
+
+// A mode with maps.txt prefixes plays only those maps; the other modes play every map no mode claims.
+func TestModeMaps(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "addons/amxmodx/configs/modes"), 0o755)
+	for name, prefixes := range map[string]string{"classic": "", "surf": "# surf only\nsurf_\n"} {
+		os.MkdirAll(filepath.Join(dir, "modes", name), 0o755)
+		os.WriteFile(filepath.Join(dir, "modes", name, "mode.cfg"), []byte("mp_x 1 // probe\n"), 0o644)
+		os.WriteFile(filepath.Join(dir, pluginList(name)), nil, 0o644)
+		if prefixes != "" {
+			os.WriteFile(filepath.Join(dir, "modes", name, "maps.txt"), []byte(prefixes), 0o644)
+		}
+	}
+	manifest := filepath.Join(dir, "manifest.json")
+	os.WriteFile(manifest, []byte(`{"maps":{"de_dust2":{},"surf_ski":{},"aim_map":{}}}`), 0o644)
+	c, err := LoadCatalog(manifest, filepath.Join(dir, "modes"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	classic, _ := c.Mode("classic")
+	surf, _ := c.Mode("surf")
+	if got := strings.Join(c.MapsFor(surf), ","); got != "surf_ski" {
+		t.Errorf("surf maps %s", got)
+	}
+	if got := strings.Join(c.MapsFor(classic), ","); got != "aim_map,de_dust2" {
+		t.Errorf("classic maps %s", got)
+	}
+}

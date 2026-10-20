@@ -779,14 +779,44 @@ func TestCreateOptions(t *testing.T) {
 		t.Fatalf("catalog options %+v", cat.Options)
 	}
 	body := func(opts any) map[string]any {
-		return map[string]any{"map": "de_dust2", "mode": "classic", "options": opts}
+		return map[string]any{"map": "de_dust2", "mode": "classic", "options": opts, "host": "  Duds\x01\";quit  "}
 	}
 	h.expect(t, "POST", "/api/rooms", body(map[string]string{"mp_friendlyfire": "1"}), nil, 201, "")
+	var rooms []struct {
+		Host     string
+		Settings []struct{ Label, Value string }
+	}
+	json.Unmarshal(h.expect(t, "GET", "/api/rooms", nil, nil, 200, ""), &rooms)
+	if len(rooms) != 1 || rooms[0].Host != "Dudsquit" || len(rooms[0].Settings) != 2 ||
+		rooms[0].Settings[0].Label != "Friendly fire" || rooms[0].Settings[0].Value != "On" {
+		t.Fatalf("rooms %+v", rooms)
+	}
 	if a := readLines(h.argvLog); len(a) != 1 || tokenAfter(a[0], "cs_duds_opts") != "mp_friendlyfire/1/mp_roundtime/5" {
 		t.Fatalf("argv %q", a)
 	}
 	for _, bad := range []any{map[string]string{"mp_friendlyfire": "2"}, map[string]string{"sv_cheats": "1"},
 		map[string]string{"mp_roundtime": "5;quit"}, "nope"} {
 		h.expect(t, "POST", "/api/rooms", body(bad), nil, 400, "")
+	}
+}
+
+// GET /api/players: everyone online in every room, by name, with no ids or addresses.
+func TestOnlinePlayers(t *testing.T) {
+	h := start(t)
+	r := h.create(t, "de_dust2", "classic")
+	join(t, h.dial(t, r), "alice")
+	type online struct{ Name, Room, Map, Mode string }
+	var got []online
+	waitFor(t, 10*time.Second, "alice in /api/players", func() bool {
+		raw := h.expect(t, "GET", "/api/players", nil, nil, 200, "")
+		got = nil
+		json.Unmarshal(raw, &got)
+		return len(got) == 1 && got[0].Name == "alice"
+	})
+	if got[0].Room != r.ID || got[0].Map != "de_dust2" || got[0].Mode != "classic" {
+		t.Fatalf("%+v", got)
+	}
+	if raw := string(h.expect(t, "GET", "/api/players", nil, nil, 200, "")); strings.Contains(raw, "127.10.") || strings.Contains(raw, "userid") {
+		t.Fatalf("leaks ids or addresses: %s", raw)
 	}
 }
