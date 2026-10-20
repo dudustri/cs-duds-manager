@@ -1,0 +1,13 @@
+#!/bin/sh
+# Build-time helper: scripts/fetch NAME OUT. Looks NAME up in backend/docker/pins.txt, downloads it to OUT,
+# and fails on an unknown name or a sha256 mismatch. PINS overrides the list location.
+set -eu
+[ $# -eq 2 ] || { echo "usage: fetch NAME OUT" >&2; exit 2; }
+name=$1 out=$2
+pins=${PINS:-$(dirname "$0")/../backend/docker/pins.txt}
+line=$(awk -v n="$name" '$1 == n && $1 !~ /^#/ { print $2, $3; exit }' "$pins")
+[ -n "$line" ] || { echo "fetch: '$name' is not in $pins" >&2; exit 1; }
+url=${line% *} want=${line#* }
+curl -fsSL --retry 3 --retry-delay 2 -o "$out" "$url"
+got=$(sha256sum "$out" | cut -d' ' -f1)
+[ "$got" = "$want" ] || { rm -f "$out"; echo "fetch: $name sha256 mismatch: got $got, want $want" >&2; exit 1; }

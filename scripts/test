@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# The single test entry point: scripts/test [fast|stack|soak]   (default fast; each tier includes the ones before it)
+#   fast   go test -race ./... in backend/, node --test in web/. Needs Go + Node 24. No Docker, no network.
+#   stack  compose up (test env) -> go test -tags stack ./acceptance/... + playwright test -> compose down.
+#          Needs Docker; the first build pulls HLDS via SteamCMD. Ports :80 (SITE_ADDRESS) and ICE_PORT must be free.
+#   soak   stack + compose.soak.yaml (backend gets NET_ADMIN; the soak test applies/removes netem via tc inside
+#          the container), go test -tags soak -timeout 45m. SOAK_DURATION (default 30m) tunes the length.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+tier="${1:-fast}"
+case "$tier" in fast|stack|soak) ;; *) echo "usage: scripts/test [fast|stack|soak]" >&2; exit 2 ;; esac
+
+echo "== fast: backend"
+(cd backend && go test -race -timeout 300s ./...)
+echo "== fast: web"
+(cd web && node --test 'test/*.test.ts')   # node 24 rejects a bare directory argument
+[ "$tier" = fast ] && exit 0
+
+export PROJECT=cs-duds-test
+export STACK_URL="${STACK_URL:-http://localhost}"
+export SITE_ADDRESS="${SITE_ADDRESS:-$STACK_URL}"
+# the hash of "test-admin-pw" (what the stack tests log in with); limits raised so tests don't trip them
+export ADMIN_PASSWORD_HASH='$2a$10$.wtZ5mOxntIvkmsEcFnM9.9PVAH715Y1eMYYEy7FKEY75oidB00CS'
+export ROOM_IDLE_TIMEOUT=45s ROOM_PORTS=27015-27022 CREATE_LIMIT_BURST=1000 CREATE_LIMIT_EVERY=1ms \
+       LOGIN_LIMIT_BURST=1000 LOGIN_LIMIT_EVERY=1ms SESSION_LIMIT_PER_IP=64
+files=(-f compose.yaml)
+[ "$tier" = soak ] && files+=(-f compose.soak.yaml) && export SOAK_COMPOSE="docker compose -p $PROJECT -f compose.yaml -f compose.soak.yaml"
+
+for p in 80 27101; do
+  if ss -Hlnt "sport = :$p" 2>/dev/null | grep -q . || ss -Hlnu "sport = :$p" 2>/dev/null | grep -q .; then
+    echo "port $p is busy; stop whatever uses it (or set SITE_ADDRESS/ICE_PORT)" >&2; exit 1
+  fi
+done
+
+cleanup() { docker compose -p "$PROJECT" "${files[@]}" down -v --remove-orphans || true; }
+trap cleanup EXIT
+docker compose -p "$PROJECT" "${files[@]}" up -d --build
+for i in $(seq 1 120); do curl -fsS "$STACK_URL/api/catalog" >/dev/null 2>&1 && break; sleep 2; done
+curl -fsS "$STACK_URL/api/catalog" >/dev/null
+
+echo "== stack: go"
+(cd backend && go test -tags stack -count=1 -timeout 30m ./acceptance/...)
+echo "== stack: playwright"
+(cd web && npx playwright test)
+if [ "$tier" = soak ]; then
+  echo "== soak"
+  (cd backend && go test -tags soak -count=1 -timeout 45m -run TestSoak ./acceptance/...)
+fi

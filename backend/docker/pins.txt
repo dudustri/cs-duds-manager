@@ -1,0 +1,22 @@
+# The ONLY list of third-party downloads. Format: NAME URL SHA256 (whitespace separated).
+# The Dockerfile fetches through `scripts/fetch NAME OUT`, which fails on an unknown name or a hash mismatch.
+# GitHub release hashes below equal GitHub's published asset digests; metamod-r publishes none, so ours is computed.
+steamcmd        https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz                                        cebf0046bfd08cf45da6bc094ae47aa39ebf4155e5ede41373b579b8f1071e7c
+rehlds          https://github.com/rehlds/ReHLDS/releases/download/3.15.0.896/rehlds-bin-3.15.0.896.zip                        997baeb7ef3842dab3e034d82dc651ebfe560c23b158adce660a6b97976b4e2b
+regamedll       https://github.com/rehlds/ReGameDLL_CS/releases/download/5.30.0.814/regamedll-bin-5.30.0.814.zip               457f5c96a4d10280fcad47f106cbd5be86363a47df1ccab91c514e9d1bc6fd18
+metamod-r       https://github.com/rehlds/Metamod-R/releases/download/1.3.0.149/metamod-bin-1.3.0.149.zip                      ede7f59c4e0220afe8c02aa348a130cce527f87d36ffdb674e37a501ce57be94
+reunion         https://github.com/rehlds/ReUnion/releases/download/0.2.0.34/reunion-0.2.0.34.zip                              29745559cefdcaee78c847d16e3861a8981fb77afc7600a58bb1a8a57dfeb897
+amxx-base       https://github.com/alliedmodders/amxmodx/releases/download/1.9.0.5303/amxmodx-1.9.0-git5303-base-linux.tar.gz    1ed6898ced2c1fcf225c288b94effc19917e987b284e42911587738ee3c93699
+amxx-cstrike    https://github.com/alliedmodders/amxmodx/releases/download/1.9.0.5303/amxmodx-1.9.0-git5303-cstrike-linux.tar.gz a2a5ef44bb366a90adf432c708ac49eb63b4b44d7b0de123e8cd52395d27b8e9
+# GunGame 2.13c sounds (server must precache them), fysiks1/amxx-gungame_cstrike @ 8024d1ef35cddf357ce18b277bde2c6422cab56d
+gg-brass_bell   https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_brass_bell.wav  818ce90dc03f34664aee15f28efd30a5873e852043957b8be11c37f65c39eaa7
+gg-knife_level  https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_knife_level.wav 33183e49d6a877d5b3d604838c392d904cf19eb23b675912a07558c20662f84e
+gg-levelup      https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_levelup.wav     7e03c12c2af7671cf6ebcfbe1cf4ad964cbeb979439afaad9a8b4b55a0976b62
+gg-lostlead     https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_lostlead.wav     e2210ef24033762ad4ea2f71b7cbc2e0c6e23dc1e0511147cdb3d14b61e1c9ca
+gg-nade_level   https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_nade_level.wav  6f89f7b9ce94a9e7762eb3733f7b8d26dd55fe167155102081c6cd2b121054ac
+gg-takenlead    https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_takenlead.wav    c68b8dcefc4db9e22b2dc5dca6c2865a4a31744bffae268c9f0c726bf4dbb27d
+gg-tiedlead     https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_tiedlead.wav     87dfb48d7398a2c75db64e55a834ef0f7107f85d14bd62f70cc55a8652c829a5
+gg-triple       https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_triple.wav       301d63628d74952c347b55e036914a62255a3a8a3f766db4ff61124286c3092b
+gg-welcome      https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_welcome.wav      1544afd42fc7926ce923ad499a264cec24e0aaae4884926d399457fc80956003
+# zBot profiles (BotProfile.db, BotChatter.db, radio sounds), ReGameDLL_CS @ 781a68ae1c6fb652cf4fbc894970b4fb4dde19f9 (tag 5.30.0.814), regamedll/extra/zBot/
+bot-profiles    https://raw.githubusercontent.com/rehlds/ReGameDLL_CS/781a68ae1c6fb652cf4fbc894970b4fb4dde19f9/regamedll/extra/zBot/bot_profiles.zip 39e6e8a137dbbbdef842cdb4318ef1069b3467127a0cc19bdc6eca1d5d693e38

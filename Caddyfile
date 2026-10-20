@@ -1,0 +1,18 @@
+{
+	admin off   # host networking: do not expose Caddy's admin API on the host's loopback
+}
+
+{$SITE_ADDRESS:http://localhost} {
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8080   # the backend; Caddy replaces any client-supplied X-Forwarded-For
+	}
+	handle {
+		root * /srv
+		try_files {path} {path}.html
+		@immutable path /assets/* /engine/*   # content-addressed pk3s; engine paths carry the package version
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@revalidate not path /assets/* /engine/*   # manifest.json, /app/*, pages
+		header @revalidate Cache-Control "no-cache"
+		file_server
+	}
+}

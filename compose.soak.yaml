@@ -1,0 +1,6 @@
+# Overlay for scripts/test soak: the soak test runs `tc qdisc ... netem` inside the backend container.
+# Under host networking that is the host's loopback, so the test removes it again when it ends.
+services:
+  backend:
+    user: root          # `docker compose exec` runs as the image user, and only root gets the added capability
+    cap_add: [NET_ADMIN]

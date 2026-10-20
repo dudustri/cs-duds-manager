@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Counter-Strike rooms</title>
+<link rel="stylesheet" href="/app/app.css">
+</head>
+<body>
+<div id="lobby">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><circle cx="16" cy="16" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 2v8M16 22v8M2 16h8M22 16h8" stroke="currentColor" stroke-width="2"/><circle cx="16" cy="16" r="1.6" fill="currentColor"/></svg>
+      <div><h1>Counter-Strike 1.6</h1><span id="room-count" class="dim">Rooms</span></div>
+    </div>
+    <label class="who" for="name">Your name
+      <input id="name" data-testid="name-input" maxlength="31" autocomplete="off" spellcheck="false">
+    </label>
+  </header>
+  <p id="status" data-testid="status" role="status" class="banner"></p>
+
+  <main class="lobby-grid">
+    <section class="servers" aria-labelledby="servers-h">
+      <h2 id="servers-h">Servers</h2>
+      <table class="rooms">
+        <thead><tr><th>Map</th><th>Mode</th><th>Players</th><th></th></tr></thead>
+        <tbody id="room-list" data-testid="room-list"></tbody>
+      </table>
+      <p class="note" id="list-note" role="status"></p>
+    </section>
+
+    <section class="card create" aria-labelledby="create-h">
+      <h2 id="create-h">Create a room</h2>
+      <form id="create" autocomplete="off">
+        <label for="map">Map</label>
+        <select id="map" data-testid="map-select"></select>
+        <label for="mode">Mode</label>
+        <select id="mode" data-testid="mode-select"></select>
+        <label for="max-players">Players</label>
+        <select id="max-players" data-testid="max-players-select"></select>
+        <button id="create-room" data-testid="create-room" class="primary" type="submit">Create and play</button>
+      </form>
+      <p class="note" id="create-note" role="status"></p>
+      <p class="dim fine">The first visit downloads about 240 MB of maps. They stay cached in this browser after that.</p>
+    </section>
+  </main>
+</div>
+
+<div id="game" data-testid="game" hidden>
+  <canvas id="canvas" width="640" height="480"></canvas>
+
+  <div id="loading" data-testid="loading-screen" class="loading" hidden>
+    <svg class="radar" viewBox="-100 -100 200 200" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width=".6">
+        <circle r="95"/><circle r="70"/><circle r="45"/><circle r="20"/>
+        <path d="M-95 0H95M0-95V95"/>
+      </g>
+      <path class="sweep" d="M0 0L95 0A95 95 0 0 0 67 -67Z" fill="currentColor"/>
+      <g class="blips" fill="currentColor"><circle cx="40" cy="-30" r="3"/><circle cx="-55" cy="20" r="3"/><circle cx="-10" cy="60" r="3"/></g>
+    </svg>
+    <div class="load-body">
+      <p class="dim" id="load-sub">Joining</p>
+      <h2 id="load-map"></h2>
+      <p id="load-stage" data-testid="loading-stage" role="status"></p>
+      <div class="bar" data-testid="progress"><i id="bar"></i></div>
+      <ol class="steps" id="steps"><li>Download</li><li>Engine</li><li>Join</li></ol>
+      <button id="cancel" type="button">Cancel</button>
+    </div>
+  </div>
+
+  <div id="overlay" data-testid="game-overlay" hidden>
+    <div class="ov-panel">
+      <div class="ov-bar">
+        <button id="leave" data-testid="leave" type="button" class="danger">Leave</button>
+        <button id="fullscreen" data-testid="fullscreen" type="button" class="primary big"></button>
+      </div>
+      <p class="dim fine">Click the game to resume. Esc releases the mouse.</p>
+      <section id="controls" aria-label="Room controls">
+        <h3 id="controls-h">Players</h3>
+        <ul class="players" id="players"></ul>
+        <div id="bots" hidden>
+          <h3>Bots</h3>
+          <div class="botrow">
+            <select id="bot-diff" aria-label="Bot difficulty"><option value="0">Easy</option><option value="1" selected>Normal</option><option value="2">Hard</option><option value="3">Expert</option></select>
+            <button id="bot-ct" type="button" class="ct">Add bot CT</button>
+            <button id="bot-t" type="button" class="tt">Add bot T</button>
+            <button id="bot-clear" type="button">Remove all bots</button>
+          </div>
+        </div>
+        <fieldset>
+          <legend>Vote for the next map (pick 1 to 4)</legend>
+          <div class="maps" id="vote-maps"></div>
+        </fieldset>
+        <button id="vote-start" data-testid="vote-start" type="button">Start vote</button>
+        <p class="note" id="host-note" role="status"></p>
+      </section>
+    </div>
+  </div>
+</div>
+<script type="module" src="/app/main.js"></script>
+</body>
+</html>

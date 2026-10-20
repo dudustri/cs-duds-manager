@@ -1,0 +1,29 @@
+# Every variable is optional; an empty value means "use the backend's default" (see .env.example).
+services:
+  backend:
+    build: { context: ., target: backend }
+    network_mode: host      # relay, hlds children and the 127.10/16 session sources share one loopback; ICE port bound directly
+    init: true              # tini: if the backend dies the container exits and every hlds child with it
+    restart: unless-stopped
+    stop_grace_period: 15s  # the backend stops its rooms on SIGTERM
+    environment:
+      PUBLIC_IP: ${PUBLIC_IP:-}
+      ICE_PORT: ${ICE_PORT:-}
+      ROOM_PORTS: ${ROOM_PORTS:-}
+      ROOM_IDLE_TIMEOUT: ${ROOM_IDLE_TIMEOUT:-}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:-}
+      CREATE_LIMIT_BURST: ${CREATE_LIMIT_BURST:-}
+      CREATE_LIMIT_EVERY: ${CREATE_LIMIT_EVERY:-}
+      LOGIN_LIMIT_BURST: ${LOGIN_LIMIT_BURST:-}
+      LOGIN_LIMIT_EVERY: ${LOGIN_LIMIT_EVERY:-}
+      SESSION_LIMIT_PER_IP: ${SESSION_LIMIT_PER_IP:-}
+      SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-}
+      STATUS_EVERY: ${STATUS_EVERY:-}
+      READY_TIMEOUT: ${READY_TIMEOUT:-}
+  caddy:
+    build: { context: ., target: caddy }
+    network_mode: host
+    restart: unless-stopped
+    depends_on: [backend]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}

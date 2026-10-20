@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Room admin</title>
+<link rel="stylesheet" href="/app/app.css">
+</head>
+<body class="admin">
+<header class="titlebar"><h1>Room admin</h1><a class="ver" href="/">Back to the lobby</a></header>
+<main class="adminbox">
+  <section class="panel" id="login" hidden>
+    <h2>Sign in</h2>
+    <form id="login-form">
+      <label for="password">Admin password</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <button type="submit">Sign in</button>
+    </form>
+  </section>
+  <section class="panel" id="rooms" hidden>
+    <h2>Running rooms</h2>
+    <table class="rooms">
+      <thead><tr><th>Room</th><th>Map</th><th>Mode</th><th class="num">Players</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </section>
+  <p class="note" id="note" role="status"></p>
+</main>
+<script type="module" src="/app/admin.js"></script>
+</body>
+</html>
