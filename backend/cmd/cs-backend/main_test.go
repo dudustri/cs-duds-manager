@@ -20,7 +20,7 @@ func TestDefaults(t *testing.T) {
 	if len(cfg.Rooms.Ports) != 6 || cfg.Rooms.Ports[0] != 27015 || cfg.Relay.ICEPort != 27101 || !cfg.Relay.PublicIP.IsValid() {
 		t.Errorf("defaults: %+v", cfg)
 	}
-	if cfg.Rooms.IdleTimeout != 10*time.Minute || cfg.CreateLimitBurst != 6 || cfg.LoginLimitEvery != 12*time.Second {
+	if cfg.Rooms.IdleTimeout != time.Hour || cfg.CreateLimitBurst != 6 || cfg.LoginLimitEvery != 12*time.Second {
 		t.Errorf("limits: %+v", cfg)
 	}
 }

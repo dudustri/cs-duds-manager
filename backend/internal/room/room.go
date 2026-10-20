@@ -46,7 +46,7 @@ type Config struct {
 	HLDSDir      string        // cwd for the hlds binary
 	HLDSBin      string        // ./hlds_linux in prod; the fakehlds binary in tests
 	Ports        []int         // one game port per room; len(Ports) is the room cap
-	IdleTimeout  time.Duration // ROOM_IDLE_TIMEOUT (default 10m)
+	IdleTimeout  time.Duration // ROOM_IDLE_TIMEOUT (default 1h)
 	StatusEvery  time.Duration // default 5s
 	ReadyTimeout time.Duration // default 30s; create blocks at most this long, probe included
 	Log          *slog.Logger
@@ -72,6 +72,8 @@ type Room struct {
 
 	mp        Map
 	set       Settings
+	host      string
+	maps      []string
 	hostToken string
 	port      int
 	addr      netip.AddrPort
@@ -95,11 +97,13 @@ type Info struct {
 	Players    int       `json:"players"`
 	MaxPlayers int       `json:"maxPlayers"`
 	CreatedAt  time.Time `json:"createdAt"`
+	Host       string    `json:"host,omitempty"`     // the creator's player name, for display only
+	Settings   []Setting `json:"settings,omitempty"` // the mode options it was created with
 }
 
 func NewManager(cfg Config) *Manager {
 	if cfg.IdleTimeout <= 0 {
-		cfg.IdleTimeout = 10 * time.Minute
+		cfg.IdleTimeout = time.Hour
 	}
 	if cfg.StatusEvery <= 0 {
 		cfg.StatusEvery = 5 * time.Second
@@ -164,12 +168,13 @@ func randBytes(n int) []byte {
 
 // Create starts hlds and returns once RCON answers and the mode's probe cvar matches. On any
 // failure (including ctx cancellation) the process is killed and the port freed before it returns.
-func (m *Manager) Create(ctx context.Context, mp Map, mode Mode, maxPlayers int, set Settings) (*Room, error) {
+// maps are the catalog maps of mode (Catalog.MapsFor): the room's own map cycle and vote list.
+func (m *Manager) Create(ctx context.Context, mp Map, mode Mode, maxPlayers int, set Settings, host string, maps []string) (*Room, error) {
 	r, err := m.reserve(mp, mode, maxPlayers)
 	if err != nil {
 		return nil, err
 	}
-	r.set = set // before the supervisor starts: it reads it for argv
+	r.set, r.host, r.maps = set, host, maps // before the supervisor starts: it reads them for argv and configs
 	go m.supervise(r)
 	select {
 	case err = <-r.started:
@@ -187,7 +192,7 @@ func (m *Manager) Create(ctx context.Context, mp Map, mode Mode, maxPlayers int,
 // supervise is the room's only writer after creation and the single path that tears it down.
 func (m *Manager) supervise(r *Room) {
 	defer m.wg.Done()
-	cmd := exec.Command(m.cfg.HLDSBin, launchArgs(r.port, r.Mode, r.mp, r.set, r.rcon.password, r.MaxPlayers, r.ID)...)
+	cmd := exec.Command(m.cfg.HLDSBin, launchArgs(r.port, r.Mode, r.mp, r.set, r.rcon.password, r.MaxPlayers, r.ID, len(r.maps) > 0)...)
 	cmd.Dir = m.cfg.HLDSDir
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // no Pdeathsig: init:true reaps on backend exit
 	cmd.Stdout = &logWriter{log: m.cfg.Log, id: r.ID, secret: r.rcon.password}
@@ -371,7 +376,7 @@ func (m *Manager) Close() {
 }
 
 func (r *Room) Info() Info {
-	i := Info{ID: r.ID, Mode: r.Mode.name, MaxPlayers: r.MaxPlayers, CreatedAt: r.CreatedAt}
+	i := Info{ID: r.ID, Mode: r.Mode.name, MaxPlayers: r.MaxPlayers, CreatedAt: r.CreatedAt, Host: r.host, Settings: r.set.labels}
 	if st := r.snap.Load(); st != nil {
 		i.Map, i.Players = st.Map, st.Humans()
 	}
@@ -384,6 +389,21 @@ func (r *Room) HostToken() string     { return r.hostToken }
 
 func (r *Room) IsHost(token string) bool {
 	return subtle.ConstantTimeCompare([]byte(token), []byte(r.hostToken)) == 1
+}
+
+// Online is the human players as of the supervisor's last status poll (no RCON round trip).
+func (r *Room) Online() []Player {
+	st := r.snap.Load()
+	if st == nil {
+		return nil
+	}
+	var out []Player
+	for _, p := range st.Players {
+		if !p.Bot {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func (r *Room) Players(ctx context.Context) ([]Player, error) {
@@ -453,7 +473,7 @@ func voteReply(out string, err error) error {
 
 // launchArgs is pure; its inputs are typed. +sv_rcon_condebug 0 must precede the map so ReHLDS
 // never echoes the RCON password to its console.
-func launchArgs(port int, mode Mode, mp Map, set Settings, rconPassword string, maxPlayers int, id string) []string {
+func launchArgs(port int, mode Mode, mp Map, set Settings, rconPassword string, maxPlayers int, id string, withMaps bool) []string {
 	args := []string{
 		"-game", "cstrike", "-port", strconv.Itoa(port), "-sport", strconv.Itoa(port + 10000), "-maxplayers", strconv.Itoa(maxPlayers),
 		"+ip", "127.0.0.1", "+rcon_password", rconPassword, "+sv_rcon_condebug", "0",
@@ -462,6 +482,9 @@ func launchArgs(port int, mode Mode, mp Map, set Settings, rconPassword string, 
 	}
 	if set.s != "" { // our core plugin applies them on every map, after the cfg files (cs_duds_votes.sma)
 		args = append(args, "+localinfo", "cs_duds_opts", set.s)
+	}
+	if withMaps {
+		args = append(args, "+mapcyclefile", roomConfigsRel(id)+"/mapcycle.txt") // written by mkConfigs
 	}
 	// +map last: hlds ignores what follows it
 	return append(args, "+mapchangecfgfile", "modes/"+mode.name+"/mode.cfg", "+map", mp.name)

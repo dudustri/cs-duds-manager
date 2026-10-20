@@ -209,7 +209,7 @@ port from `ROOM_PORTS` (default 27015–27020). The size of that range is the ro
   the userid, so it is parsed from the right.
 - **Site admin:** one password, which can stop any room and passes every host check. Rooms
   and admin sessions are in memory and vanish on restart.
-- **Idle cleanup:** rooms with 0 humans for `ROOM_IDLE_TIMEOUT` (default 10 min) stop
+- **Idle cleanup:** rooms with 0 humans for `ROOM_IDLE_TIMEOUT` (default 1 hour) stop
   themselves.
 
 ## Game content: maps & modes

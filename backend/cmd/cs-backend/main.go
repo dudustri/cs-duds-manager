@@ -111,7 +111,7 @@ func configFromEnv(getenv func(string) string, log *slog.Logger) (api.Config, er
 	cfg := api.Config{
 		Rooms: room.Config{
 			HLDSDir: hlds, HLDSBin: str("HLDS_BIN", "./hlds_linux"), Ports: ports,
-			IdleTimeout:  dur("ROOM_IDLE_TIMEOUT", 10*time.Minute, 10*time.Second),
+			IdleTimeout:  dur("ROOM_IDLE_TIMEOUT", time.Hour, 10*time.Second),
 			StatusEvery:  dur("STATUS_EVERY", 5*time.Second, 100*time.Millisecond),
 			ReadyTimeout: dur("READY_TIMEOUT", 30*time.Second, time.Second),
 			Log:          log,
