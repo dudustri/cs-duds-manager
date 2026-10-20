@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -85,36 +86,83 @@ func scanTree(contentDir string) (map[string]string, error) {
 // Package builds base.pk3 + one pk3 per map + manifest.json + mapcycle.txt in outDir.
 // It fails with *MissingError, writing nothing, if any map references a missing file.
 func Package(contentDir string, maps []string, outDir string) (Manifest, error) {
+	man, _, err := PackageAll(contentDir, maps, "", nil, outDir)
+	return man, err
+}
+
+// PackageAll is Package plus extra maps from extraDir (a cstrike/-shaped tree of community maps). The base stays
+// the stock tree only: an extra map's pk3 carries its own files plus every extra file it references (wads, sky,
+// models, sounds; stock wins a name clash). Stock maps must resolve completely; an extra map that references a
+// missing file is skipped and returned in skipped instead of failing the build.
+func PackageAll(contentDir string, maps []string, extraDir string, extraMaps []string, outDir string) (Manifest, []Missing, error) {
 	seen := map[string]bool{}
-	for _, m := range maps {
+	for _, m := range append(append([]string{}, maps...), extraMaps...) {
 		if m == "" || strings.ContainsAny(m, `/\`) || seen[m] {
-			return Manifest{}, fmt.Errorf("bad or duplicate map name %q", m)
+			return Manifest{}, nil, fmt.Errorf("bad or duplicate map name %q", m)
 		}
 		seen[m] = true
 	}
 	t, err := scanTree(contentDir)
 	if err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 	wadCache := map[string]map[string]struct{}{}
 	var missing []Missing
 	for _, m := range maps {
-		mm, err := checkMap(t, m, wadCache)
+		mm, _, err := checkMap(t, m, wadCache)
 		if err != nil {
-			return Manifest{}, fmt.Errorf("%s: %w", m, err)
+			return Manifest{}, nil, fmt.Errorf("%s: %w", m, err)
 		}
 		missing = append(missing, mm...)
 	}
 	if len(missing) > 0 {
-		return Manifest{}, &MissingError{missing}
+		return Manifest{}, nil, &MissingError{missing}
+	}
+
+	// extra maps: resolved against stock + extra; files only extra has travel with the map
+	all := t
+	extraFiles := map[string][]string{} // map -> its pk3 keys (own files + referenced extra files)
+	var skipped []Missing
+	var accepted []string
+	if extraDir != "" && len(extraMaps) > 0 {
+		x, err := scanExtra(extraDir)
+		if err != nil {
+			return Manifest{}, nil, err
+		}
+		all = make(map[string]string, len(t)+len(x))
+		for k, v := range x {
+			all[k] = v
+		}
+		for k, v := range t {
+			all[k] = v
+		}
+		for _, m := range extraMaps {
+			mm, deps, err := checkMap(all, m, wadCache)
+			if err != nil {
+				skipped = append(skipped, Missing{m, "maps/" + m + ".bsp", err.Error()})
+				continue
+			}
+			if hard := slices.DeleteFunc(mm, cosmetic); len(hard) > 0 {
+				skipped = append(skipped, hard...)
+				continue
+			}
+			keys := ownFiles(all, m)
+			for _, d := range deps {
+				if _, stock := t[d]; !stock {
+					keys = append(keys, d)
+				}
+			}
+			extraFiles[m] = keys
+			accepted = append(accepted, m)
+		}
 	}
 
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 	tmp, err := os.MkdirTemp(outDir, ".pkg-")
 	if err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 	defer os.RemoveAll(tmp)
 
@@ -126,38 +174,73 @@ func Package(contentDir string, maps []string, outDir string) (Manifest, error) 
 		}
 	}
 	if man.Base, err = writePK3(tmp, t, baseKeys); err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 	for _, m := range maps {
 		if man.Maps[m], err = writePK3(tmp, t, ownFiles(t, m)); err != nil {
-			return Manifest{}, err
+			return Manifest{}, nil, err
 		}
 	}
+	for _, m := range accepted {
+		if man.Maps[m], err = writePK3(tmp, all, dedupe(extraFiles[m])); err != nil {
+			return Manifest{}, nil, err
+		}
+	}
+	maps = append(append([]string{}, maps...), accepted...)
 	js, _ := json.MarshalIndent(man, "", "  ")
 	if err := os.WriteFile(filepath.Join(tmp, "manifest.json"), append(js, '\n'), 0o644); err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 	cycle := strings.Join(maps, "\n") + "\n"
 	if err := os.WriteFile(filepath.Join(tmp, "mapcycle.txt"), []byte(cycle), 0o644); err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 
 	// Publish: pk3s first, manifest last, so a reader never sees a manifest without its files.
 	if err := os.MkdirAll(filepath.Join(outDir, "assets"), 0o755); err != nil {
-		return Manifest{}, err
+		return Manifest{}, nil, err
 	}
 	pubs, _ := filepath.Glob(filepath.Join(tmp, "assets", "*.pk3"))
 	for _, p := range pubs {
 		if err := os.Rename(p, filepath.Join(outDir, "assets", filepath.Base(p))); err != nil {
-			return Manifest{}, err
+			return Manifest{}, nil, err
 		}
 	}
 	for _, f := range []string{"mapcycle.txt", "manifest.json"} {
 		if err := os.Rename(filepath.Join(tmp, f), filepath.Join(outDir, f)); err != nil {
-			return Manifest{}, err
+			return Manifest{}, nil, err
 		}
 	}
-	return man, nil
+	return man, skipped, nil
+}
+
+// cosmetic: what a community map can do without and still load: entries of its .res download list, its sky
+// (the engine warns and draws none) and sounds (silent). Models and textures are never cosmetic.
+func cosmetic(m Missing) bool {
+	return strings.HasSuffix(m.Why, ".res") || strings.HasPrefix(m.Path, "gfx/env/") || strings.HasPrefix(m.Path, "sound/")
+}
+
+func dedupe(keys []string) []string {
+	slices.Sort(keys)
+	return slices.Compact(keys)
+}
+
+// scanExtra reads a cstrike/-shaped tree of extra content with the same filters as the stock scan.
+func scanExtra(dir string) (map[string]string, error) {
+	x := map[string]string{}
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		rel, _ := filepath.Rel(dir, p)
+		key := strings.ToLower(filepath.ToSlash(rel))
+		if dropDirs[strings.SplitN(key, "/", 2)[0]] || dropExts[path.Ext(key)] || dropFiles[key] {
+			return nil
+		}
+		x[key] = p
+		return nil
+	})
+	return x, err
 }
 
 func ownFiles(t map[string]string, m string) (keys []string) {
@@ -171,25 +254,27 @@ func ownFiles(t map[string]string, m string) (keys []string) {
 	return keys
 }
 
-func checkMap(t map[string]string, m string, wadCache map[string]map[string]struct{}) ([]Missing, error) {
+// checkMap returns what map m references but t lacks, and the tree keys it references (deps).
+func checkMap(t map[string]string, m string, wadCache map[string]map[string]struct{}) (out []Missing, deps []string, err error) {
 	bspPath, ok := t["maps/"+m+".bsp"]
 	if !ok {
-		return []Missing{{m, "maps/" + m + ".bsp", "map file"}}, nil
+		return []Missing{{m, "maps/" + m + ".bsp", "map file"}}, nil, nil
 	}
 	raw, err := os.ReadFile(bspPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	ents, external, err := parseBSP(raw)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var out []Missing
 	dedup := map[string]bool{}
 	ref := func(p, why string) {
 		p = strings.ToLower(strings.ReplaceAll(p, `\`, "/"))
-		if _, ok := t[p]; !ok && !dedup[p] {
+		if _, ok := t[p]; ok {
+			deps = append(deps, p)
+		} else if !dedup[p] {
 			dedup[p] = true
 			out = append(out, Missing{m, p, why})
 		}
@@ -233,7 +318,7 @@ func checkMap(t map[string]string, m string, wadCache map[string]map[string]stru
 	}
 
 	if len(external) == 0 {
-		return out, nil
+		return out, deps, nil
 	}
 	lumps := map[string]struct{}{}
 	for _, w := range wads {
@@ -241,14 +326,15 @@ func checkMap(t map[string]string, m string, wadCache map[string]map[string]stru
 		if !ok { // a listed-but-absent wad is fine when every external texture still resolves
 			continue
 		}
+		deps = append(deps, w)
 		names, ok := wadCache[w]
 		if !ok {
 			b, err := os.ReadFile(wp)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			if names, err = wadLumps(b); err != nil {
-				return nil, fmt.Errorf("%s: %w", w, err)
+				return nil, nil, fmt.Errorf("%s: %w", w, err)
 			}
 			wadCache[w] = names
 		}
@@ -262,7 +348,7 @@ func checkMap(t map[string]string, m string, wadCache map[string]map[string]stru
 			out = append(out, Missing{m, "texture " + x, "in none of: " + strings.Join(wads, ", ")})
 		}
 	}
-	return out, nil
+	return out, deps, nil
 }
 
 // writePK3 writes the named tree files as a reproducible zip into tmp/assets/<sha256>.pk3.

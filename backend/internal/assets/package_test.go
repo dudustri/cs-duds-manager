@@ -343,3 +343,54 @@ func TestReproducibleAndStoredWads(t *testing.T) {
 		t.Error("base.pk3 lacks the wads")
 	}
 }
+
+// Extra maps: their own wads, sky and sounds ride in the map's pk3 (never in base.pk3); a map that references a
+// file nobody has is skipped, not fatal; a stock file of the same name beats the extra copy.
+func TestExtraMaps(t *testing.T) {
+	root := baseTree(t)
+	goodMap(t, root, "de_stock")
+	extra := t.TempDir()
+	world := kv("wad", `\cstrike\pool.wad`) + kv("skyname", "pool")
+	put(t, extra, "maps/fy_pool.bsp", bsp(ents(world, kv("classname", "ambient_generic")+kv("message", "pool/splash.wav")), tex{"tiles", true}))
+	put(t, extra, "pool.wad", wad("tiles"))
+	for _, f := range sky {
+		put(t, extra, "gfx/env/pool"+f+".tga", filler("poolsky"+f))
+	}
+	put(t, extra, "sound/pool/splash.wav", filler("splash"))
+	put(t, extra, "sound/common.wav", filler("extra-overrides-stock")) // must not replace the stock file
+	put(t, extra, "maps/aim_broken.bsp", bsp(ents("", kv("classname", "item")+kv("model", "models/nowhere.mdl"))))
+	// missing only cosmetic files (a .res extra, the sky, a sound): still offered, without them
+	put(t, extra, "maps/fy_quiet.bsp", bsp(ents(kv("skyname", "gone"), kv("classname", "ambient_generic")+kv("message", "gone/x.wav"))))
+	put(t, extra, "maps/fy_quiet.res", []byte("sound/misc/gone.wav\n"))
+
+	out := t.TempDir()
+	man, skipped, err := assets.PackageAll(root, []string{"de_stock"}, extra, []string{"fy_pool", "aim_broken", "fy_quiet"}, out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := man.Maps["fy_pool"]; !ok || len(man.Maps) != 3 || man.Maps["fy_quiet"].File == "" {
+		t.Fatalf("maps %v", man.Maps)
+	}
+	if len(skipped) != 1 || skipped[0].Map != "aim_broken" || skipped[0].Path != "models/nowhere.mdl" {
+		t.Fatalf("skipped %+v", skipped)
+	}
+	pool := zipNames(t, filepath.Join(out, man.Maps["fy_pool"].File))
+	for _, want := range []string{"maps/fy_pool.bsp", "pool.wad", "gfx/env/poolup.tga", "sound/pool/splash.wav"} {
+		if pool[want] == nil {
+			t.Errorf("fy_pool.pk3 lacks %s", want)
+		}
+	}
+	base := zipNames(t, filepath.Join(out, man.Base.File))
+	for _, never := range []string{"pool.wad", "sound/pool/splash.wav", "maps/fy_pool.bsp"} {
+		if base[never] != nil {
+			t.Errorf("base.pk3 holds extra file %s", never)
+		}
+	}
+	if got := readZip(t, base["sound/common.wav"]); !strings.HasPrefix(got, "cstrike ") {
+		t.Errorf("stock sound/common.wav was replaced: %q", got[:20])
+	}
+	cycle, _ := os.ReadFile(filepath.Join(out, "mapcycle.txt"))
+	if string(cycle) != "de_stock\nfy_pool\nfy_quiet\n" {
+		t.Errorf("mapcycle %q", cycle)
+	}
+}

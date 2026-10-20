@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# Stages: fetch -> hlds -> addons -> gungame -> gobuild -> assets -> webbuild -> server -> backend -> caddy.
+# Stages: fetch -> hlds -> addons -> gungame -> gobuild -> extramaps -> assets -> teamart -> webbuild -> server
+#         -> backend -> caddy.
 # Every third-party download goes through scripts/fetch and backend/docker/pins.txt (name, url, sha256).
 # Every base image is pinned by digest. Targets: `backend` and `caddy` (see compose.yaml).
 
@@ -69,9 +70,10 @@ RUN ./amxxpc gungame.sma -o../plugins/gungame.amxx \
 COPY server-config/amxx/cs_duds_votes.sma ./cs_duds_votes.sma
 RUN ./amxxpc cs_duds_votes.sma -o../plugins/cs_duds_votes.amxx \
  && test -s ../plugins/cs_duds_votes.amxx && rm cs_duds_votes.sma
-COPY server-config/amxx/cs_duds_announcer.sma ./cs_duds_announcer.sma
-RUN ./amxxpc cs_duds_announcer.sma -o../plugins/cs_duds_announcer.amxx \
- && test -s ../plugins/cs_duds_announcer.amxx && rm cs_duds_announcer.sma
+COPY server-config/amxx/cs_duds_announcer.sma server-config/amxx/cs_duds_timer.sma server-config/amxx/cs_duds_zombie.sma ./
+RUN for p in cs_duds_announcer cs_duds_timer cs_duds_zombie; do \
+      ./amxxpc "$p.sma" "-o../plugins/$p.amxx" && test -s "../plugins/$p.amxx" && rm "$p.sma" || exit 1; \
+    done
 # The plugin precaches these sounds, so the server tree needs them.
 RUN mkdir -p /overlay/cstrike/sound/gungame \
  && for n in brass_bell knife_level levelup lostlead nade_level takenlead tiedlead triple welcome; do \
@@ -91,12 +93,40 @@ COPY backend/ ./
 RUN CGO_ENABLED=0 go build -trimpath -ldflags=-s -o /out/ ./cmd/cs-backend ./cmd/package-assets
 
 # The packager runs on the STOCK tree (before any overlay). A missing reference fails the build here.
+# Community maps: a CS 1.6 server-tree mirror pinned to one commit (git verifies the content by its hash). Only
+# data folders are fetched and only data file types kept (no plugins, configs or binaries); names are lowercased
+# because the Linux server opens files case-sensitively. The packager offers every map whose files all resolve.
+FROM ${DEBIAN} AS extramaps
+ARG MAPS_MIRROR=https://github.com/hpoon/HLDS-CS1.6
+ARG MAPS_COMMIT=5953bf494f28bcf60bcbe94ed1416654ba6ab6be
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates && rm -rf /var/lib/apt/lists/* \
+ && git init -q /mirror && cd /mirror && git remote add origin "$MAPS_MIRROR" \
+ && git sparse-checkout set --no-cone '/cstrike/maps/' '/cstrike/*.wad' '/cstrike/gfx/env/' '/cstrike/sound/' '/cstrike/models/' '/cstrike/sprites/' \
+ && git fetch -q --depth 1 --filter=blob:none origin "$MAPS_COMMIT" && git checkout -q FETCH_HEAD \
+ && test "$(git rev-parse HEAD)" = "$MAPS_COMMIT" \
+ && mkdir -p /extra && cd cstrike \
+ && find . -type f \( -iname '*.bsp' -o -iname '*.wad' -o -iname '*.wav' -o -iname '*.mdl' -o -iname '*.spr' -o -iname '*.tga' \
+      -o -iname '*.bmp' -o -iname '*.res' -o -iname '*.txt' \) -exec cp --parents {} /extra/ \; \
+ && cd /extra && find . -depth -name '*[A-Z]*' -execdir sh -c 'n=$(printf %s "$1" | tr A-Z a-z); [ -e "$n" ] || mv "$1" "$n"' _ {} \; \
+ && rm -rf /mirror && test -f /extra/maps/cs_rio.bsp
+
 FROM hlds AS assets
 COPY --from=gobuild /out/package-assets /usr/local/bin/package-assets
 COPY server-config/maps.txt /tmp/maps.txt
+COPY server-config/maps-exclude.txt /tmp/maps-exclude.txt
+COPY --from=extramaps /extra/ /extra/
 # the plugins' sounds (GunGame, announcer) go into the browser's base bundle too
 COPY --from=gungame /overlay/cstrike/sound/ /opt/hlds/cstrike/sound/
-RUN package-assets -content /opt/hlds -maps /tmp/maps.txt -out /out
+RUN package-assets -content /opt/hlds -maps /tmp/maps.txt -extra /extra -exclude /tmp/maps-exclude.txt -out /out
+
+# The team picker shows the game's own team-menu characters (gfx/vgui/*.tga), converted for browsers.
+FROM hlds AS teamart
+RUN apt-get update && apt-get install -y --no-install-recommends imagemagick && rm -rf /var/lib/apt/lists/* \
+ && mkdir -p /out/teams \
+ && for n in terror leet arctic guerilla urban gsg9 sas gign; do \
+      convert "/opt/hlds/cstrike/gfx/vgui/$n.tga" -auto-orient -quality 85 "/out/teams/$n.webp"; \
+    done \
+ && test -s /out/teams/gign.webp
 
 FROM node:24@sha256:14078204b6bb268c107ceff6d3c43f45a888105e5c2b18b14c32b3409d93a1b0 AS webbuild
 WORKDIR /web
@@ -114,6 +144,9 @@ COPY server-config/metamod-plugins.ini /opt/hlds/cstrike/addons/metamod/plugins.
 COPY server-config/modes/ /opt/hlds/cstrike/modes/
 COPY server-config/reunion.cfg /tmp/reunion.override
 COPY --from=assets /out/mapcycle.txt /opt/hlds/cstrike/mapcycle.txt
+# community map files next to the stock ones, never replacing one (-n); the catalog (manifest) lists the usable maps
+COPY --from=extramaps /extra/ /tmp/extra/
+RUN cp -rn /tmp/extra/. /opt/hlds/cstrike/ && rm -rf /tmp/extra
 COPY scripts/assemble-server.sh /usr/local/bin/assemble-server
 RUN assemble-server /opt/hlds/cstrike /tmp/reunion.override && rm /tmp/reunion.override
 
@@ -138,5 +171,6 @@ ENTRYPOINT ["cs-backend"]
 FROM caddy:2.11@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af AS caddy
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=webbuild /web/dist/ /srv/
+COPY --from=teamart /out/teams/ /srv/img/teams/
 COPY --from=assets /out/assets/ /srv/assets/
 COPY --from=assets /out/manifest.json /srv/manifest.json
