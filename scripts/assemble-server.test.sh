@@ -22,7 +22,7 @@ grep -q '^gamedll_linux "addons/metamod/metamod_i386.so"' "$t/liblist.gam" || fa
 grep -q '^SteamIdHashSalt = [0-9a-f]\{48\}$' "$t/reunion.cfg" || fail "reunion salt"
 grep -q '^cid_RevEmu2013 = 3$' "$t/reunion.cfg" || fail "reunion override"
 ! grep -q '^amxx_plugins[[:space:]]' "$t/addons/amxmodx/configs/core.ini" || fail "core.ini"
-grep -q '^bot_quota "0"' "$t/game_init.cfg" || fail "game_init.cfg"
+grep -q '^bot_enable "1"' "$t/game_init.cfg" || fail "game_init.cfg"
 [ -f "$t/addons/amxmodx/configs/maps.ini" ] || fail "maps.ini"
 for m in classic deathmatch gungame; do
   grep -q '^cs_duds_announcer.amxx' "$t/addons/amxmodx/configs/modes/$m.ini" || fail "$m.ini"

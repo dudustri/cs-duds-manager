@@ -26,9 +26,8 @@ grep -q "^SteamIdHashSalt = $salt\$" reunion.cfg || fail "reunion.cfg salt not a
 sed -i '/^amxx_plugins[[:space:]]/d;/^amxx_configsdir[[:space:]]/d' addons/amxmodx/configs/core.ini
 ! grep -q '^amxx_\(plugins\|configsdir\)[[:space:]]' addons/amxmodx/configs/core.ini || fail "core.ini still sets amxx paths"
 
-# zBot on, no automatic bots: the host adds them from the overlay (BotProfile.db comes from the overlay)
+# zBot on (BotProfile.db comes from the overlay); server.cfg keeps automatic bots off
 sed -i 's/^bot_enable .*/bot_enable "1"/' game_init.cfg
-printf '\nbot_quota "0"\nbot_join_after_player "0"\nbot_chatter "off"\n' >> game_init.cfg
 grep -q '^bot_enable "1"' game_init.cfg || fail "game_init.cfg has no bot_enable"
 
 # the map votes (mapsmenu, mapchooser, rtv) offer the catalog only
