@@ -542,14 +542,18 @@ func (s *Server) cmdAllowed(w http.ResponseWriter, r *http.Request) bool {
 }
 
 type ipLimiter struct {
-	mu    sync.Mutex
-	every time.Duration
-	burst int
-	m     map[netip.Addr]*rate.Limiter
+	mu      sync.Mutex
+	every   time.Duration
+	burst   int
+	m       map[netip.Addr]*rate.Limiter
+	pruneAt int
 }
 
+// maxLimiterEntries bounds the map under an address-rotation flood.
+const maxLimiterEntries = 100_000
+
 func newLimiter(burst int, every time.Duration) *ipLimiter {
-	return &ipLimiter{every: every, burst: burst, m: map[netip.Addr]*rate.Limiter{}}
+	return &ipLimiter{every: every, burst: burst, m: map[netip.Addr]*rate.Limiter{}, pruneAt: 1024}
 }
 
 func (l *ipLimiter) allow(ip netip.Addr) bool { return l.get(ip).Allow() }
@@ -558,14 +562,21 @@ func (l *ipLimiter) allow(ip netip.Addr) bool { return l.get(ip).Allow() }
 func (l *ipLimiter) has(ip netip.Addr) bool { return l.get(ip).Tokens() >= 1 }
 
 func (l *ipLimiter) get(ip netip.Addr) *rate.Limiter {
+	if ip.Is6() && !ip.Is4In6() { // one IPv6 subscriber usually owns a whole /64
+		ip = netip.PrefixFrom(ip, 64).Masked().Addr()
+	}
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if len(l.m) > 1024 { // prune full buckets: they carry no information
-		for k, v := range l.m {
+	if len(l.m) >= l.pruneAt {
+		for k, v := range l.m { // full buckets carry no information
 			if v.Tokens() >= float64(l.burst) {
 				delete(l.m, k)
 			}
 		}
+		if len(l.m) >= maxLimiterEntries {
+			clear(l.m) // forgetting everyone beats growing without bound
+		}
+		l.pruneAt = min(max(1024, 2*len(l.m)), maxLimiterEntries)
 	}
 	lim := l.m[ip]
 	if lim == nil {
