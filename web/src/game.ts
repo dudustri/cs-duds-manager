@@ -9,6 +9,8 @@ import { $, errorText, setNote } from './ui.ts';
 
 export type Phase = 'lobby' | 'loading' | 'playing';
 
+declare const __LOADING_IMAGES__: string[]; // set by scripts/build.mjs from web/img/loading/
+
 export const state = {
   phase: 'lobby' as Phase,
   roomId: undefined as string | undefined, // the room we are connected to (or joining)
@@ -85,6 +87,8 @@ export function setStage(step: string, text: string, fraction?: number): void {
 /** Call synchronously from the click handler: the game takes over the screen at once (fullscreen needs the gesture). */
 export function enterGame(mapName: string, sub: string): number {
   const my = setPhase('loading');
+  const bg = __LOADING_IMAGES__[Math.floor(Math.random() * __LOADING_IMAGES__.length)];
+  if (bg) loading.style.setProperty('--load-img', `url("${bg}")`);
   $('load-map').textContent = mapName;
   $('load-sub').textContent = sub;
   setStage('download', 'Preparing');

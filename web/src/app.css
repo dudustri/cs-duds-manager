@@ -112,14 +112,19 @@ table.rooms { width: 100%; border-collapse: separate; border-spacing: 0; backgro
 
 .loading {
   position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; gap: clamp(24px, 6vw, 80px); padding: 24px;
-  background: radial-gradient(ellipse at 30% 40%, #1b2530 0, var(--bg) 70%);
+  /* a random picture from web/img/loading under a dark wash, so the text stays readable on any of them */
+  background: linear-gradient(rgba(8, 10, 13, .45), rgba(8, 10, 13, .8)), var(--load-img, none) center / cover no-repeat,
+    radial-gradient(ellipse at 30% 40%, #1b2530 0, var(--bg) 70%);
 }
 .radar { width: min(36vmin, 340px); flex: none; color: var(--sand); }
 .radar .sweep { opacity: .22; transform-origin: 0 0; animation: sweep 3.2s linear infinite; }
 .radar .blips { opacity: .8; animation: blink 3.2s steps(1) infinite; }
 @keyframes sweep { to { transform: rotate(360deg); } }
 @keyframes blink { 50% { opacity: .2; } }
-.load-body { width: min(420px, 100%); }
+.load-body {
+  width: min(460px, 100%); padding: 22px 24px; border-radius: 10px;
+  background: rgba(14, 17, 21, .78); border: 1px solid rgba(255, 255, 255, .06); backdrop-filter: blur(6px);
+}
 .load-body h2 { font-size: clamp(36px, 7vw, 64px); line-height: 1; margin: 2px 0 18px; word-break: break-all; }
 #load-stage { margin: 0 0 10px; min-height: 1.5em; }
 .bar { height: 6px; background: var(--raise); border-radius: 3px; overflow: hidden; }

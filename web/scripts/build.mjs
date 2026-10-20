@@ -13,6 +13,9 @@ const pins = JSON.parse(readFileSync(join(root, 'vendor/PINS.json'), 'utf8'));
 
 rmSync(dist, { recursive: true, force: true });
 
+// Loading-screen backgrounds: every image in img/loading/ (drop one in to add it), picked at random per load.
+const loadingImages = readdirSync(join(root, 'img/loading')).filter((f) => /\.(webp|jpe?g|png)$/.test(f)).sort();
+
 await build({
   entryPoints: { main: 'src/main.ts', admin: 'src/admin.ts', 'clock.worker': 'src/clock.worker.ts', app: 'src/app.css' },
   outdir: join(dist, 'app'),
@@ -23,8 +26,10 @@ await build({
   minify: true,
   sourcemap: true,
   logLevel: 'info',
+  define: { __LOADING_IMAGES__: JSON.stringify(loadingImages.map((f) => `/img/loading/${f}`)) },
 });
 for (const page of ['index.html', 'admin.html']) cpSync(join(root, page), join(dist, page));
+cpSync(join(root, 'img'), join(dist, 'img'), { recursive: true });
 
 // Files the page loads at runtime; yapb (bots), libmenu and the soft renderer are not used.
 const KEEP = /\.(wasm|pk3)$/;
