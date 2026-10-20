@@ -24,7 +24,7 @@ export SITE_ADDRESS="${SITE_ADDRESS:-$STACK_URL}"
 # the hash of "test-admin-pw" (what the stack tests log in with); limits raised so tests don't trip them
 export ADMIN_PASSWORD_HASH='$2a$10$.wtZ5mOxntIvkmsEcFnM9.9PVAH715Y1eMYYEy7FKEY75oidB00CS'
 export ROOM_IDLE_TIMEOUT=45s ROOM_PORTS=27015-27022 CREATE_LIMIT_BURST=1000 CREATE_LIMIT_EVERY=1ms \
-       LOGIN_LIMIT_BURST=1000 LOGIN_LIMIT_EVERY=1ms SESSION_LIMIT_PER_IP=64
+       LOGIN_LIMIT_BURST=1000 LOGIN_LIMIT_EVERY=1ms SESSION_LIMIT_PER_IP=64 ROOMS_PER_IP=0
 files=(-f compose.yaml)
 [ "$tier" = soak ] && files+=(-f compose.soak.yaml) && export SOAK_COMPOSE="docker compose -p $PROJECT -f compose.yaml -f compose.soak.yaml"
 

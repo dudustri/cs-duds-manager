@@ -9,6 +9,7 @@ export const errorText = (e: unknown): string => {
       room_not_found: 'That room no longer exists.',
       too_many_sessions: 'Too many connections from your network. Try again in a minute.',
       rate_limited: 'Too many requests. Wait a moment and try again.',
+      too_many_rooms: 'You already have the maximum number of rooms running. Join one of them or wait for it to close.',
       rooms_full: 'All room slots are taken. Join a room or wait for one to close.',
       start_failed: 'The room did not start in time. Try again.',
       vote_running: 'A vote is already running.',

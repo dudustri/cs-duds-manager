@@ -42,6 +42,7 @@ type Config struct {
 	CreateLimitEvery time.Duration
 	LoginLimitBurst  int
 	LoginLimitEvery  time.Duration
+	RoomsPerIP       int // live rooms one address may hold at once (admins exempt); 0 = no limit
 }
 
 type Server struct {
@@ -54,6 +55,10 @@ type Server struct {
 	adminKey [32]byte   // random per process: admin cookies die with the process, like rooms
 	adminPw  []byte
 	mux      *http.ServeMux
+
+	roomsPerIP int
+	creatorsMu sync.Mutex
+	creators   map[string]netip.Addr // room id -> the address that created it
 }
 
 func New(cfg Config) (*Server, error) {
@@ -70,6 +75,9 @@ func New(cfg Config) (*Server, error) {
 		createLm: newLimiter(cfg.CreateLimitBurst, cfg.CreateLimitEvery),
 		loginLm:  newLimiter(cfg.LoginLimitBurst, cfg.LoginLimitEvery),
 		cmdLm:    newLimiter(20, time.Second),
+
+		roomsPerIP: cfg.RoomsPerIP,
+		creators:   map[string]netip.Addr{},
 	}
 	rand.Read(s.adminKey[:])
 	s.mux.HandleFunc("GET /api/catalog", s.catalog)
@@ -150,13 +158,21 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 	}
 	// charged only for a room actually made: a full server or a failed start doesn't count against the caller
 	// shortcut: concurrent creates from one address can overshoot the burst, bounded by the room ports
-	if !s.createLm.has(clientIP(r)) {
+	ip := clientIP(r)
+	if !s.createLm.has(ip) {
 		writeErr(w, 429, "rate_limited", "too many rooms created, try again later")
+		return
+	}
+	if !s.isAdmin(r) && !s.mayHoldAnother(ip) {
+		writeErr(w, 429, "too_many_rooms", "you already have the maximum number of rooms running")
 		return
 	}
 	rm, err := s.rooms.Create(r.Context(), mp, mode, maxPlayers)
 	if err == nil {
-		s.createLm.allow(clientIP(r))
+		s.createLm.allow(ip)
+		s.creatorsMu.Lock()
+		s.creators[rm.ID] = ip
+		s.creatorsMu.Unlock()
 	}
 	switch {
 	case errors.Is(err, room.ErrFull):
@@ -171,6 +187,24 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 			HostToken string `json:"hostToken"`
 		}{rm.Info(), rm.HostToken()})
 	}
+}
+
+// mayHoldAnother reports whether ip holds fewer live rooms than the limit, forgetting rooms that are gone.
+func (s *Server) mayHoldAnother(ip netip.Addr) bool {
+	if s.roomsPerIP <= 0 {
+		return true
+	}
+	s.creatorsMu.Lock()
+	defer s.creatorsMu.Unlock()
+	n := 0
+	for id, by := range s.creators {
+		if _, ok := s.rooms.Get(id); !ok {
+			delete(s.creators, id)
+		} else if by == ip {
+			n++
+		}
+	}
+	return n < s.roomsPerIP
 }
 
 func (s *Server) deleteRoom(w http.ResponseWriter, r *http.Request) {
@@ -407,6 +441,8 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "bad_offer", "unreadable offer")
 		return
 	}
+	// shortcut: a few addresses can fill MaxSessions with idle sessions that never join hlds (per-IP cap only);
+	// a per-room per-IP cap would lock out LAN parties behind one NAT, so add one only if this is abused
 	sess := rm.NewSession(who == roleHost)
 	answer, err := s.relay.Accept(r.Context(), relay.Target{Addr: rm.Addr(), Done: rm.Done(), MaxSessions: rm.MaxPlayers + 4, Attach: sess.Attach},
 		clientIP(r), string(offer))

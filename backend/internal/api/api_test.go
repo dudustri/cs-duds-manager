@@ -739,3 +739,15 @@ func TestFailedCreateIsNotCharged(t *testing.T) {
 	h.expect(t, "DELETE", "/api/rooms/"+a.ID, nil, h.adminHdr(), 204, "")
 	h.create(t, "de_dust2", "classic") // the second token is still there
 }
+
+// One address can't hold every room port: it may keep RoomsPerIP rooms running; admins are exempt.
+func TestRoomsPerIP(t *testing.T) {
+	h := start(t, func(s *spec) { s.cfg.RoomsPerIP = 1 })
+	ip := func(a string) map[string]string { return map[string]string{"X-Forwarded-For": a} }
+	a := h.create(t, "de_dust2", "classic", ip("198.51.100.1"))
+	h.expect(t, "POST", "/api/rooms", map[string]string{"map": "de_dust2", "mode": "classic"}, ip("198.51.100.1"), 429, "too_many_rooms")
+	h.create(t, "de_dust2", "classic", ip("198.51.100.2"))
+	h.login(t)
+	h.expect(t, "DELETE", "/api/rooms/"+a.ID, nil, h.adminHdr(), 204, "")
+	h.create(t, "de_dust2", "classic", ip("198.51.100.1")) // its room is gone, so it may create again
+}

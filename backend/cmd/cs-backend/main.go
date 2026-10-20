@@ -127,6 +127,7 @@ func configFromEnv(getenv func(string) string, log *slog.Logger) (api.Config, er
 		CreateLimitEvery: dur("CREATE_LIMIT_EVERY", 5*time.Minute, time.Millisecond),
 		LoginLimitBurst:  num("LOGIN_LIMIT_BURST", 5, 1, 1<<20),
 		LoginLimitEvery:  dur("LOGIN_LIMIT_EVERY", 12*time.Second, time.Millisecond),
+		RoomsPerIP:       num("ROOMS_PER_IP", 3, 0, 1<<16),
 	}
 	if h := getenv("ADMIN_PASSWORD_HASH"); h != "" {
 		if _, err := bcrypt.Cost([]byte(h)); err != nil {
