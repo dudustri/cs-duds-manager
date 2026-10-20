@@ -700,3 +700,27 @@ func TestPlayerVotes(t *testing.T) {
 		return resp.StatusCode == 403
 	})
 }
+
+// Votes, kicks and bots each cost RCON round trips, so one address can't spam them.
+func TestCommandsRateLimited(t *testing.T) {
+	h := start(t)
+	r := h.create(t, "de_dust2", "classic")
+	for i := 0; i < 60; i++ { // burst 20 at 1/s refill: a tight loop hits the limit well before 60
+		req, _ := http.NewRequest("DELETE", h.url+"/api/rooms/"+r.ID+"/bots", nil)
+		for k, v := range r.bearer() {
+			req.Header.Set(k, v)
+		}
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode == 429 {
+			if i < 20 {
+				t.Fatalf("limited after %d commands, want at least the burst of 20", i)
+			}
+			return
+		}
+	}
+	t.Fatal("60 commands in a row were never rate limited")
+}

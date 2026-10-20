@@ -50,7 +50,8 @@ type Server struct {
 	relay    *relay.Relay
 	createLm *ipLimiter
 	loginLm  *ipLimiter
-	adminKey [32]byte // random per process: admin cookies die with the process, like rooms
+	cmdLm    *ipLimiter // votes, kicks, bots: each one costs the game server RCON round trips
+	adminKey [32]byte   // random per process: admin cookies die with the process, like rooms
 	adminPw  []byte
 	mux      *http.ServeMux
 }
@@ -68,6 +69,7 @@ func New(cfg Config) (*Server, error) {
 		cat: cat, rooms: room.NewManager(cfg.Rooms), relay: rl, adminPw: cfg.AdminPasswordHash, mux: http.NewServeMux(),
 		createLm: newLimiter(cfg.CreateLimitBurst, cfg.CreateLimitEvery),
 		loginLm:  newLimiter(cfg.LoginLimitBurst, cfg.LoginLimitEvery),
+		cmdLm:    newLimiter(20, time.Second),
 	}
 	rand.Read(s.adminKey[:])
 	s.mux.HandleFunc("GET /api/catalog", s.catalog)
@@ -207,6 +209,9 @@ func (s *Server) players(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) kick(w http.ResponseWriter, r *http.Request) {
+	if !s.cmdAllowed(w, r) {
+		return
+	}
 	rm := s.hostRoom(w, r)
 	if rm == nil {
 		return
@@ -283,6 +288,9 @@ func writeVote(w http.ResponseWriter, err error) {
 
 // votes lets any player of the room (live session token), its host or an admin start a map or kick vote.
 func (s *Server) votes(w http.ResponseWriter, r *http.Request) {
+	if !s.cmdAllowed(w, r) {
+		return
+	}
 	rm, ok := s.rooms.Get(r.PathValue("id"))
 	if !ok {
 		writeErr(w, 404, "room_not_found", "no such room")
@@ -318,6 +326,9 @@ func (s *Server) votes(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) addBot(w http.ResponseWriter, r *http.Request) {
+	if !s.cmdAllowed(w, r) {
+		return
+	}
 	rm := s.hostRoom(w, r)
 	if rm == nil {
 		return
@@ -341,6 +352,9 @@ func (s *Server) addBot(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) kickBots(w http.ResponseWriter, r *http.Request) {
+	if !s.cmdAllowed(w, r) {
+		return
+	}
 	rm := s.hostRoom(w, r)
 	if rm == nil {
 		return
@@ -464,6 +478,14 @@ func clientIP(r *http.Request) netip.Addr {
 }
 
 // ---- per-IP limiter ----
+
+func (s *Server) cmdAllowed(w http.ResponseWriter, r *http.Request) bool {
+	if s.cmdLm.allow(clientIP(r)) {
+		return true
+	}
+	writeErr(w, 429, "rate_limited", "too many commands, slow down")
+	return false
+}
 
 type ipLimiter struct {
 	mu    sync.Mutex
