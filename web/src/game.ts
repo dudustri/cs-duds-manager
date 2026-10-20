@@ -192,7 +192,9 @@ async function fetchMapAndRejoin(map: string): Promise<void> {
 const DROPPED = /Server issued disconnect\. Reason: (.*)/;
 const IN_GAME = 'cs-duds: in game'; // echoed by our server plugin (cs_duds_votes.sma) once the map has loaded
 function onEngineLog(line: string): void {
-  if (line.includes(IN_GAME) && state.phase === 'loading' && state.roomId) return void setPhase('playing');
+  if (line.includes(IN_GAME) && state.phase === 'loading' && state.roomId) {
+    return void setPhase('playing');
+  }
   const missing = MISSING_MAP.exec(line);
   if (missing && state.phase === 'playing') return void fetchMapAndRejoin(missing[1].toLowerCase());
   const m = DROPPED.exec(line);

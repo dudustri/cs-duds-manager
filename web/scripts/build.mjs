@@ -26,6 +26,7 @@ await build({
   minify: true,
   sourcemap: true,
   logLevel: 'info',
+  external: ['/img/*'], // served as files next to the page (web/img, and the team art from the Dockerfile)
   define: { __LOADING_IMAGES__: JSON.stringify(loadingImages.map((f) => `/img/loading/${f}`)) },
 });
 for (const page of ['index.html', 'admin.html']) cpSync(join(root, page), join(dist, page));

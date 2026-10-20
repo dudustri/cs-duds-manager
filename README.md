@@ -9,13 +9,19 @@ Needs: Linux, Docker 29+ with Compose v5, about 5 GB of disk, Chrome or Firefox.
 
 ## Play
 
-1. Pick a map and a mode, then "Create room". You are the room's host.
-2. The page downloads the game once (about 240 MB with the stock maps), then caches it.
-   The next visit loads from the cache.
-3. You are in. A second player opens another window, finds the room in the list and clicks "Connect".
+1. Open the lobby, then "Create server": pick a mode (or its "Quick start"), a map (search box) and the room size;
+   the mode's own settings sit under "Advanced settings". The server starts and shows up first in your list, with
+   a link to send to friends (`/#room/<id>`). Join from the toast or the list.
+2. Joining downloads the base files once, then each map only when a room needs it; all stay cached.
+3. Pick Terrorists or Counter-Terrorists in the panel that opens; Esc frees the mouse and shows the room panel.
 
-Modes: classic, deathmatch (ReGameDLL cvars) and gungame (GunGame 2.13c).
-Maps: the list in `server-config/maps.txt`.
+Modes (`server-config/modes/<mode>/`: `mode.cfg`, optional `plugins.txt` and `options.json`):
+classic, deathmatch, free for all, knife arena, aim arena and surf (ReGameDLL settings only), gungame
+(GunGame 2.13c), climb/kz (our timer plugin) and zombie (our infection plugin).
+
+Maps: the stock maps in `server-config/maps.txt`, plus every community map from a pinned CS 1.6 server-tree
+mirror (Dockerfile stage `extramaps`) whose files all resolve; `server-config/maps-exclude.txt` leaves some out.
+Map pictures in the lobby come from `web/scripts/map-shots` (in-game screenshots; `MAPS=a,b` for some).
 
 ## Host controls
 
@@ -24,7 +30,7 @@ Shown only in the browser that created the room.
 - Players: live list with "Kick".
 - Vote map: pick 1-4 maps, players vote in-game.
 
-A room with no humans for `ROOM_IDLE_TIMEOUT` (default 10 min) shuts itself down.
+A room with no humans for `ROOM_IDLE_TIMEOUT` (default 1 hour) shuts itself down.
 The number of rooms is the size of `ROOM_PORTS` (default 27015-27020: 6 rooms).
 
 ## Site admin

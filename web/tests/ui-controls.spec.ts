@@ -11,10 +11,10 @@ test('create form sets the room size', async () => {
   let id = '';
   try {
     const page = await ctx.newPage();
-    await page.goto('/');
+    await page.goto('/#create'); // the create page
     await page.getByTestId('name-input').fill(uniqueName('size'));
     await page.getByTestId('map-select').selectOption('de_dust2');
-    await page.getByTestId('mode-select').selectOption('classic');
+    await page.locator('[data-testid=mode-option][data-mode=classic]').click();
     await page.getByTestId('max-players-custom').fill('10'); // custom size; the chips are 4/6/8/12/16/20/32
     const created = page.waitForResponse((r) => r.url().endsWith('/api/rooms') && r.request().method() === 'POST');
     await page.getByTestId('create-room').click();
@@ -115,14 +115,19 @@ test('Connect maximizes the game and shows a staged loading screen until in game
   }
 });
 
-test('lobby shows only the server list and create card; the game appears only after Connect', async () => {
+test('lobby shows only the server list, creating is its own page; the game appears only after Connect', async () => {
   const room = await api.createRoom('de_dust2', 'classic');
   const ctx = await profile({ width: 1024, height: 768 });
   try {
     const page = await ctx.newPage();
     await page.goto('/');
     await expect(page.getByTestId('room-list')).toBeVisible();
+    await expect(page.getByTestId('create-room')).toBeHidden();
+    await page.getByTestId('go-create').click();
     await expect(page.getByTestId('create-room')).toBeVisible();
+    await expect(page.getByTestId('room-list')).toBeHidden();
+    await page.goBack();
+    await expect(page.getByTestId('room-list')).toBeVisible();
     await expect(page.getByTestId('game')).toBeHidden();
     expect(await page.evaluate(() => (window as any).xash)).toBeUndefined(); // the engine has not booted
     await page.getByTestId('name-input').fill(uniqueName('lobby'));

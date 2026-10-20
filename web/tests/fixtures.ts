@@ -2,8 +2,19 @@
 //
 // UI CONTRACT the lobby (web/index.html + src/main.ts) must satisfy, as these specs use it:
 //   [data-testid=name-input]                    player name field (applied to the engine on connect)
-//   [data-testid=map-select] / mode-select      <select>s filled from /api/catalog
-//   [data-testid=create-room]                   creates the room, then auto-joins it as host
+//   header nav [data-testid=go-servers] / go-players / go-create: the three pages (/, /#players, /#create)
+//   [data-testid=stat-players] / stat-servers / stat-maps   hero numbers; [data-testid=quick-play][data-mode=M]
+//                                               joins the fullest open server of mode M, or starts one and joins
+//   [data-testid=list-search] / list-mode / list-sort   filter and order the server list
+//   [data-testid=view-list] / view-cards        list (table, default) or cards ([data-testid=room-cards], same
+//                                               [data-room-id] + [data-testid=connect] inside each card)
+//   [data-testid=people]                        /#players: one row per player online
+//   [data-testid=no-rooms]                      lobby: shown instead of the list while no room is running
+//   on /#create:
+//     [data-testid=map-search] / map-select     search box narrowing the map <select> (filled from /api/catalog)
+//     [data-testid=mode-option][data-mode=M]    one card per mode (click to choose; classic is preselected)
+//     [data-testid=create-room]                 creates the room (does NOT join); then [data-testid=toast] shows
+//       [data-testid=toast-join]                joins it as host; [data-testid=toast-url] is the invite link (/#room/ID)
 //   [data-testid=room-list] [data-room-id=ID]   one row per room: text has map, mode and "players/maxPlayers" ("0/16")
 //     [data-testid=connect]                     in a row: loads bundles, boots the engine, joins
 //   [data-testid=progress]                      visible while bundles download
@@ -11,7 +22,7 @@
 //   [data-testid=leave]                         leaves the room
 //   [data-testid=host-panel]                    only in the host's browser: [data-testid=player-row] per player (text = name)
 //     [data-testid=kick]                        inside a player-row
-//     [data-testid=vote-map-option][value=MAP]  checkboxes; [data-testid=vote-start] posts vote-map
+//     [data-testid=vote-map-option][value=MAP]  checkboxes (narrowed by [data-testid=vote-search]); vote-start posts vote-map
 //   [data-testid=max-players-option]            room-size chips 4/6/8/12/16/20/32 (radios; 16 checked) (Amendment A)
 //   [data-testid=max-players-custom]            custom room size 2..32; overrides the chips while filled
 //   [data-testid=game]                          the game container (canvas inside); F11 fullscreens THIS element

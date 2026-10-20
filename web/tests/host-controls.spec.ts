@@ -14,13 +14,14 @@ test('host creates a room, votes a map, kicks a player; empty room is reaped', a
     const hostName = uniqueName('host');
     const before = new Set((await api.listRooms()).map((r) => r.id));
 
-    await host.goto('/');
+    await host.goto('/#create'); // the create page
     await host.getByTestId('name-input').fill(hostName);
     await host.getByTestId('map-select').selectOption('de_dust2');
-    await host.getByTestId('mode-select').selectOption('classic');
+    await host.locator('[data-testid=mode-option][data-mode=classic]').click();
     await host.getByTestId('create-room').click();
     await expect.poll(async () => (await api.listRooms()).find((r) => !before.has(r.id))?.id ?? '', { timeout: 120_000 }).not.toBe('');
     roomId = (await api.listRooms()).find((r) => !before.has(r.id))!.id;
+    await host.getByTestId('toast-join').click({ timeout: 60_000 }); // creating doesn't join; the toast offers it
 
     // auto-joined, and the host panel lists us
     const panel = host.getByTestId('host-panel');

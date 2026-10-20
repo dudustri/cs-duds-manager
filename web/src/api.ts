@@ -1,7 +1,12 @@
 // Typed client for the backend HTTP API. Erasable-only TypeScript: transport.ts imports it under node --test.
 
-export interface Catalog { maps: string[]; modes: string[] }
-export interface Room { id: string; map: string; mode: string; players: number; maxPlayers: number; createdAt: string }
+/** A room setting: a server cvar and the values it may take ([value, label]). */
+export interface Option { cvar: string; label: string; default: string; values: [string, string][] }
+export interface Catalog { maps: string[]; modes: string[]; options: Record<string, Option[]>; modeMaps: Record<string, string[]> }
+export interface Room {
+  id: string; map: string; mode: string; players: number; maxPlayers: number; createdAt: string;
+  host?: string; settings?: { label: string; value: string }[];
+}
 export interface CreatedRoom extends Room { hostToken: string }
 export interface Player { userid: number; name: string; steamid: string; frags: number; ping: number; bot: boolean }
 
@@ -43,8 +48,11 @@ const enc = encodeURIComponent;
 
 export const getCatalog = async (): Promise<Catalog> => (await call('GET', '/catalog')).json();
 export const listRooms = async (): Promise<Room[]> => (await call('GET', '/rooms')).json();
-export const createRoom = async (map: string, mode: string, maxPlayers: number): Promise<CreatedRoom> =>
-  (await call('POST', '/rooms', { map, mode, maxPlayers })).json();
+/** Everyone online in every room (names and frags only). */
+export interface OnlinePlayer { name: string; frags: number; room: string; map: string; mode: string }
+export const onlinePlayers = async (): Promise<OnlinePlayer[]> => (await call('GET', '/players')).json();
+export const createRoom = async (map: string, mode: string, maxPlayers: number, options: Record<string, string> = {}, host = ''): Promise<CreatedRoom> =>
+  (await call('POST', '/rooms', { map, mode, maxPlayers, options, host })).json();
 export const deleteRoom = async (id: string): Promise<void> => void (await call('DELETE', `/rooms/${enc(id)}`));
 
 /** Authorization header value: the host's token, a player's session token, or none (admin cookie). */

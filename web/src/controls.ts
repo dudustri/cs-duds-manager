@@ -54,12 +54,18 @@ async function refreshControls(): Promise<void> {
     setNote('host-note', `Could not load players: ${errorText(e)}`, true);
   }
 }
+// Before a team is picked, the big two-sided choice (with one of each side's game characters); after, a small
+// "Change team" row in the panel. The character art is converted from the game files at build (Dockerfile teamart).
+const pick = (names: string[]) => names[Math.floor(Math.random() * names.length)];
+$<HTMLImageElement>('char-t').src = `/img/teams/${pick(['terror', 'leet', 'arctic', 'guerilla'])}.webp`;
+$<HTMLImageElement>('char-ct').src = `/img/teams/${pick(['urban', 'gsg9', 'sas', 'gign'])}.webp`;
 onChange(() => {
-  $('teams').classList.toggle('picked', hasTeam());
-  $('teams-h').textContent = hasTeam() ? 'Change team' : 'Choose your team';
+  $('team-split').hidden = hasTeam();
+  $('overlay').classList.toggle('choosing', !hasTeam());
+  $('teams').hidden = !hasTeam();
   void refreshControls();
 });
-for (const b of $('teams').querySelectorAll<HTMLButtonElement>('[data-team]')) b.onclick = () => pickTeam(Number(b.dataset.team));
+for (const b of document.querySelectorAll<HTMLButtonElement>('#overlay [data-team]')) b.onclick = () => pickTeam(Number(b.dataset.team));
 setInterval(() => void refreshControls(), 3000);
 
 $('vote-start').onclick = async () => {
