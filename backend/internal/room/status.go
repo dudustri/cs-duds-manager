@@ -5,26 +5,20 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 )
 
 type Status struct {
-	Map        string
-	MaxPlayers int
-	Players    []Player
+	Map     string
+	Players []Player
 }
 
 type Player struct {
-	Slot     int           `json:"-"`
-	UserID   int           `json:"userid"`
-	Name     string        `json:"name"`
-	UniqueID string        `json:"steamid"` // "BOT" for bots
-	Frags    int           `json:"frags"`
-	Time     time.Duration `json:"-"`
-	Ping     int           `json:"ping"`
-	Loss     int           `json:"-"`
-	Addr     string        `json:"-"` // never leaves the backend
-	Bot      bool          `json:"bot"`
+	UserID   int    `json:"userid"`
+	Name     string `json:"name"`
+	UniqueID string `json:"steamid"` // "BOT" for bots
+	Frags    int    `json:"frags"`
+	Ping     int    `json:"ping"`
+	Bot      bool   `json:"bot"`
 }
 
 func (s Status) Humans() int {
@@ -51,10 +45,6 @@ func ParseStatus(text string) (Status, error) {
 					st.Map, seenMap = f[0], true
 				}
 			}
-		case strings.HasPrefix(line, "players"):
-			if _, v, ok := strings.Cut(line, "("); ok {
-				st.MaxPlayers, _ = strconv.Atoi(strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(v), "max)")))
-			}
 		case strings.HasPrefix(line, "#") && strings.Count(line, `"`) >= 2:
 			p, ok, err := parseRow(line)
 			if err != nil {
@@ -73,9 +63,9 @@ func ParseStatus(text string) (Status, error) {
 
 func parseRow(line string) (p Player, ok bool, err error) {
 	q1, q2 := strings.Index(line, `"`), strings.LastIndex(line, `"`)
+	// after the name: userid uniqueid frag time ping loss [adr]
 	f := strings.Fields(line[q2+1:])
-	slot, err1 := strconv.Atoi(strings.TrimSpace(line[1:q1]))
-	if err1 != nil || len(f) < 6 {
+	if _, err := strconv.Atoi(strings.TrimSpace(line[1:q1])); err != nil || len(f) < 6 {
 		return p, false, fmt.Errorf("status: malformed row %q", line)
 	}
 	if strings.HasPrefix(strings.ToLower(f[1]), "hltv") {
@@ -87,19 +77,5 @@ func parseRow(line string) (p Player, ok bool, err error) {
 			return p, false, fmt.Errorf("status: malformed row %q", line)
 		}
 	}
-	var secs int
-	for _, part := range strings.Split(f[3], ":") {
-		n, err := strconv.Atoi(part)
-		if err != nil {
-			return p, false, fmt.Errorf("status: malformed row %q", line)
-		}
-		secs = secs*60 + n
-	}
-	p = Player{Slot: slot, UserID: nums[0], Name: line[q1+1 : q2], UniqueID: f[1], Frags: nums[1],
-		Time: time.Duration(secs) * time.Second, Ping: nums[2], Bot: f[1] == "BOT"}
-	p.Loss, _ = strconv.Atoi(f[5])
-	if len(f) > 6 {
-		p.Addr = f[6]
-	}
-	return p, true, nil
+	return Player{UserID: nums[0], Name: line[q1+1 : q2], UniqueID: f[1], Frags: nums[1], Ping: nums[2], Bot: f[1] == "BOT"}, true, nil
 }

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
 func TestParseStatus(t *testing.T) {
@@ -18,14 +17,14 @@ func TestParseStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Map != "de_dust2" || st.MaxPlayers != 16 || len(st.Players) != 3 || st.Humans() != 2 {
+	if st.Map != "de_dust2" || len(st.Players) != 3 || st.Humans() != 2 {
 		t.Fatalf("%+v", st)
 	}
 	p := st.Players[0]
-	if p.Slot != 1 || p.UserID != 7 || p.Name != `a";quit;"` || p.Frags != -2 || p.Time != time.Hour+2*time.Minute+3*time.Second || p.Addr != "127.10.0.1:27005" {
+	if p.UserID != 7 || p.Name != `a";quit;"` || p.Frags != -2 || p.Ping != 41 {
 		t.Fatalf("%+v", p)
 	}
-	if b := st.Players[2]; !b.Bot || b.Addr != "" {
+	if b := st.Players[2]; !b.Bot {
 		t.Fatalf("%+v", b)
 	}
 	if _, err := ParseStatus("garbage"); err == nil {
