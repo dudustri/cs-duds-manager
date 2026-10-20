@@ -222,7 +222,6 @@ func (r *Relay) Close() error {
 
 type session struct {
 	pc       *webrtc.PeerConnection
-	dc       *webrtc.DataChannel
 	conn     *net.UDPConn
 	lim      *rate.Limiter
 	lastUp   atomic.Int64
@@ -233,7 +232,6 @@ type session struct {
 }
 
 func (s *session) attach(dc *webrtc.DataChannel) {
-	s.dc = dc
 	dc.OnMessage(func(m webrtc.DataChannelMessage) {
 		if m.IsString || len(m.Data) > maxDatagram || !s.lim.Allow() {
 			return
