@@ -85,6 +85,7 @@ export class RelayTransport {
       if (pc.iceGatheringState !== 'complete') {
         await new Promise<void>((resolve) => {
           pc.addEventListener('icegatheringstatechange', () => pc.iceGatheringState === 'complete' && resolve());
+          setTimeout(resolve, 5_000); // a stalled gatherer: offer the candidates we have rather than hang the page
         });
       }
       const { answer, token } = await openSession(roomId, pc.localDescription!.sdp, auth);
