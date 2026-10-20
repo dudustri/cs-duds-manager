@@ -170,6 +170,7 @@ export const auth = (): api.Auth =>
 
 export async function join(id: string, my: number): Promise<void> {
   state.roomId = id;
+  teamChosen = false;
   try {
     const x = await boot();
     if (!isCurrent(my)) return;
@@ -178,6 +179,7 @@ export async function join(id: string, my: number): Promise<void> {
     setName(x, nameInput.value);
     await transport.open(id, api.hostAuth(hostToken()));
     if (!isCurrent(my)) return transport.close();
+    x.Cmd_ExecuteString('_vgui_menus 0'); // text menus: the server closes them itself when the overlay picks a team
     x.Cmd_ExecuteString(CONNECT_CMD);
     if (hostToken()) x.Cmd_ExecuteString('bind F3 amxmodmenu');
     setTimeout(() => isCurrent(my) && state.phase === 'loading' && leave('Could not join: the server did not let us in.', true), 45_000);
@@ -187,6 +189,19 @@ export async function join(id: string, my: number): Promise<void> {
     backToLobby(`Could not join: ${errorText(e)}`, true);
   }
 }
+
+let teamChosen = false;
+/** Joins a team from the overlay (1 T, 2 CT, 5 auto, 6 spectator) and, since this is a click, takes the mouse. */
+export function pickTeam(team: number): void {
+  if (!engine || state.phase !== 'playing') return;
+  engine.Cmd_ExecuteString(`jointeam ${team}`);
+  if (team !== 6) engine.Cmd_ExecuteString('joinclass 5'); // 5: a random skin of that team
+  teamChosen = true;
+  wantLock = true;
+  Promise.resolve(grantLock()).catch(() => {});
+  syncOverlay();
+}
+export const hasTeam = () => teamChosen;
 
 /** `?boot`: start the engine without a room (debugging). */
 export function bootOnly(): void {

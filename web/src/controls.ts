@@ -1,7 +1,7 @@
 // The in-game overlay panel: players (with kick / vote kick), bots and map votes.
 import * as api from './api.ts';
 import { cleanName } from './engine.ts';
-import { auth, canManage, onChange, overlayOpen, state } from './game.ts';
+import { auth, canManage, hasTeam, onChange, overlayOpen, pickTeam, state } from './game.ts';
 import { $, errorText, setNote } from './ui.ts';
 
 const controls = $('controls');
@@ -54,7 +54,12 @@ async function refreshControls(): Promise<void> {
     setNote('host-note', `Could not load players: ${errorText(e)}`, true);
   }
 }
-onChange(() => void refreshControls());
+onChange(() => {
+  $('teams').classList.toggle('picked', hasTeam());
+  $('teams-h').textContent = hasTeam() ? 'Change team' : 'Choose your team';
+  void refreshControls();
+});
+for (const b of $('teams').querySelectorAll<HTMLButtonElement>('[data-team]')) b.onclick = () => pickTeam(Number(b.dataset.team));
 setInterval(() => void refreshControls(), 3000);
 
 $('vote-start').onclick = async () => {

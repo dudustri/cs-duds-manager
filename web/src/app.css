@@ -141,6 +141,13 @@ table.rooms { width: 100%; border-collapse: separate; border-spacing: 0; backgro
   pointer-events: auto; position: absolute; top: 0; right: 0; bottom: 0; width: min(440px, 100%); overflow-y: auto;
   padding: 20px; background: rgba(22, 27, 33, .94); border-left: 1px solid var(--line);
 }
+.teams { margin: 14px 0 4px; }
+.team-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.team-row button { padding: 14px 10px; font-size: 15px; }
+.team-row button.tt { background: var(--tt); border-color: var(--tt); color: #1d1406; }
+.team-row button.ct { background: var(--ct); border-color: var(--ct); color: #08131f; }
+.teams.picked .team-row { grid-template-columns: repeat(4, 1fr); }
+.teams.picked .team-row button { padding: 7px 6px; font-size: 13px; }
 .ov-bar { display: flex; gap: 10px; align-items: stretch; }
 .ov-bar .big { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 14px; font-size: 16px; line-height: 1.25; }
 .ov-bar .big small { font-weight: 500; font-size: 12px; opacity: .8; }
