@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The single test entry point: scripts/test [fast|stack|soak]   (default fast; each tier includes the ones before it)
-#   fast   go test -race ./... in backend/, node --test in web/. Needs Go + Node 24. No Docker, no network.
+#   fast   go test -race ./... in backend/, the server-assembly fixture test, node --test in web/. Needs Go + Node 24. No Docker, no network.
 #   stack  compose up (test env) -> go test -tags stack ./acceptance/... + playwright test -> compose down.
 #          Needs Docker; the first build pulls HLDS via SteamCMD. Ports :80 (SITE_ADDRESS) and ICE_PORT must be free.
 #   soak   stack + compose.soak.yaml (backend gets NET_ADMIN; the soak test applies/removes netem via tc inside
@@ -12,6 +12,8 @@ case "$tier" in fast|stack|soak) ;; *) echo "usage: scripts/test [fast|stack|soa
 
 echo "== fast: backend"
 (cd backend && go test -race -timeout 300s ./...)
+echo "== fast: server assembly"
+scripts/assemble-server.test.sh
 echo "== fast: web"
 (cd web && node --test 'test/*.test.ts')   # node 24 rejects a bare directory argument
 [ "$tier" = fast ] && exit 0

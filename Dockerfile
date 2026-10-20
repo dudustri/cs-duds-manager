@@ -114,42 +114,8 @@ COPY server-config/metamod-plugins.ini /opt/hlds/cstrike/addons/metamod/plugins.
 COPY server-config/modes/ /opt/hlds/cstrike/modes/
 COPY server-config/reunion.cfg /tmp/reunion.override
 COPY --from=assets /out/mapcycle.txt /opt/hlds/cstrike/mapcycle.txt
-WORKDIR /opt/hlds/cstrike
-RUN set -eu; \
-    # metamod becomes the game DLL; it finds the real one (ReGameDLL's dlls/cs.so) by itself
-    sed -i 's#^gamedll_linux .*#gamedll_linux "addons/metamod/metamod_i386.so"#' liblist.gam; \
-    grep -q '^gamedll_linux "addons/metamod/metamod_i386.so"' liblist.gam; \
-    # ReUnion: the stock file with our keys replaced in place; the salt is random per build
-    salt=$(head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n'); \
-    sed -i "s/@SALT@/$salt/" /tmp/reunion.override; \
-    awk -F'[ \t]*=[ \t]*' 'NR==FNR { if ($0 !~ /^#/ && NF >= 2) kv[$1] = $2; next } \
-         ($1 in kv) { print $1 " = " kv[$1]; seen[$1] = 1; next } { print } \
-         END { for (k in kv) if (!(k in seen)) { print "missing key " k > "/dev/stderr"; exit 1 } }' \
-      /tmp/reunion.override reunion.cfg > /tmp/reunion.cfg; \
-    mv /tmp/reunion.cfg reunion.cfg; rm /tmp/reunion.override; \
-    grep -q "^SteamIdHashSalt = $salt\$" reunion.cfg; \
-    # core.ini's amxx_plugins would override the per-room `+localinfo amxx_plugins`; drop it (AMXX defaults to the same file)
-    sed -i '/^amxx_plugins[[:space:]]/d;/^amxx_configsdir[[:space:]]/d' addons/amxmodx/configs/core.ini; \
-    ! grep -q '^amxx_plugins\|^amxx_configsdir' addons/amxmodx/configs/core.ini; \
-    # same for the per-room configs dir (the backend gives each room its own users.ini)
-    # zBot on, no automatic bots: the host adds them from the overlay (BotProfile.db comes from the overlay)
-    sed -i 's/^bot_enable .*/bot_enable "1"/' game_init.cfg; \
-    printf '\nbot_quota "0"\nbot_join_after_player "0"\nbot_chatter "off"\n' >> game_init.cfg; \
-    grep -q '^bot_enable "1"' game_init.cfg; \
-    # the map votes (mapsmenu, mapchooser, rtv) offer the catalog only
-    cp mapcycle.txt addons/amxmodx/configs/maps.ini; \
-    # per-mode AMXX plugin list = stock plugins.ini (admin.amxx + adminvote.amxx included) + the mode's extras
-    mkdir -p addons/amxmodx/configs/modes; \
-    for d in modes/*/; do \
-      m=$(basename "$d"); \
-      { cat addons/amxmodx/configs/plugins.ini; printf '\ncs_duds_votes.amxx\ncs_duds_announcer.amxx\n'; [ ! -f "$d/plugins.txt" ] || cat "$d/plugins.txt"; } > "addons/amxmodx/configs/modes/$m.ini"; \
-      grep -q '^admin.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
-      grep -q '^adminvote.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
-      grep -q '^cs_duds_votes.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
-      grep -q '^cs_duds_announcer.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
-    done; \
-    grep -q '^gungame.amxx' addons/amxmodx/configs/modes/gungame.ini; \
-    rm -rf addons/amxmodx/scripting
+COPY scripts/assemble-server.sh /usr/local/bin/assemble-server
+RUN assemble-server /opt/hlds/cstrike /tmp/reunion.override && rm /tmp/reunion.override
 
 FROM ${DEBIAN} AS backend
 # iproute2: the soak applies netem with `tc` inside this container.
