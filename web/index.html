@@ -26,14 +26,19 @@
 
   <section class="hero" id="hero" aria-labelledby="hero-h">
     <div class="hero-text">
-      <h1 id="hero-h">Counter-Strike 1.6<span>in your browser</span></h1>
-      <p class="hero-sub">No install, no account. Pick a game and you're in.</p>
+      <p class="hero-kicker">The classic. Instantly.</p>
+      <h1 id="hero-h">Play CS 1.6<span>in your browser</span></h1>
+      <p class="hero-sub">No downloads. No installations.<br>Just open your browser and jump into the fight.</p>
       <h2 class="quick-h">Quick play</h2>
       <div id="quick-modes" class="quick-modes"></div>
+      <a class="browse" href="#servers-h" data-testid="browse-servers">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="5" rx="1"/><rect x="3" y="11" width="18" height="5" rx="1"/><path d="M7 6.5h.01M7 13.5h.01M3 20h18"/></svg>
+        <strong>Browse servers</strong><span>Choose your game</span>
+      </a>
       <dl class="stats">
-        <div><dd id="stat-players" data-testid="stat-players">0</dd><dt>Players online</dt></div>
-        <div><dd id="stat-servers" data-testid="stat-servers">0</dd><dt>Servers</dt></div>
-        <div><dd id="stat-maps" data-testid="stat-maps">0</dd><dt>Maps in play</dt></div>
+        <div><span class="stat-dot" aria-hidden="true"></span><dd id="stat-players" data-testid="stat-players">0</dd><dt>Players online</dt></div>
+        <div><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="7" rx="1"/><rect x="4" y="13" width="16" height="7" rx="1"/></svg><dd id="stat-servers" data-testid="stat-servers">0</dd><dt>Active servers</dt></div>
+        <div><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><dd id="stat-maps" data-testid="stat-maps">0</dd><dt>Maps in play</dt></div>
       </dl>
     </div>
   </section>

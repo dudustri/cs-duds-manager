@@ -22,6 +22,11 @@ const MODE_MAPS: Record<string, { prefixes: string[]; quick: string }> = {
   zombie: { prefixes: ['zm_', 'de_', 'cs_'], quick: 'de_dust2' },
 };
 const QUICK_PLAY = ['classic', 'zombie', 'gungame', 'awp', 'deathmatch', 'surf'];
+const QUICK_TITLE: Record<string, string> = { classic: 'CS 1.6' };
+const QUICK_SUB: Record<string, string> = {
+  classic: 'Classic match', zombie: 'Humans vs zombies', gungame: 'Kill to level up', awp: 'Snipers only',
+  deathmatch: 'Instant respawn', surf: 'Ride the ramps',
+};
 // small line icons for the quick play buttons (currentColor, 24x24)
 const svg = (d: string) => `<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">${d}</svg>`;
 const MODE_ICON: Record<string, string> = {
@@ -315,9 +320,14 @@ function renderQuickModes(modes: string[]): void {
       b.dataset.mode = m;
       b.dataset.testid = 'quick-play';
       b.innerHTML = MODE_ICON[m] ?? MODE_ICON.classic;
-      const name = document.createElement('span');
-      name.textContent = modeName(m);
-      b.append(name);
+      const text = document.createElement('span');
+      text.className = 'qm-text';
+      const name = document.createElement('strong');
+      name.textContent = QUICK_TITLE[m] ?? modeName(m);
+      const sub = document.createElement('small');
+      sub.textContent = QUICK_SUB[m] ?? '';
+      text.append(name, sub);
+      b.append(text);
       b.onclick = () => quickPlay(m);
       return b;
     }),
