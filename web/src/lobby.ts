@@ -65,7 +65,7 @@ function renderRooms(): void {
       b.disabled = busy || full;
       b.onclick = () => {
         if (state.phase !== 'lobby') return;
-        void join(r.id, enterGame(r.map, 'Joining')); // enterGame is synchronous, so the fullscreen request counts as part of the click
+        void join(r.id, r.map, enterGame(r.map, 'Joining')); // enterGame is synchronous, so the fullscreen request counts as part of the click
       };
       tr.insertCell().append(b);
       return tr;
@@ -150,7 +150,7 @@ $('create').onsubmit = async (ev) => {
     const room = await api.createRoom(map, $<HTMLSelectElement>('mode').value, maxPlayers());
     api.hostTokens.set(room.id, room.hostToken);
     void refreshRooms();
-    if (isCurrent(my)) await join(room.id, my);
+    if (isCurrent(my)) await join(room.id, map, my);
   } catch (e) {
     if (!isCurrent(my)) return;
     backToLobby('', false);

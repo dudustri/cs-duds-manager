@@ -75,6 +75,14 @@ export async function bootEngine(
   return x;
 }
 
+/** Adds map bundles to a running engine (between maps: the rescan reopens every pack). */
+export function mountMaps(x: Xash3D, bundles: Map<string, Uint8Array>): void {
+  const fs = x.em!.FS;
+  for (const [name, bytes] of bundles) fs.writeFile(`/rodir/cstrike/${name}`, bytes, { canOwn: true });
+  bundles.clear();
+  x.Cmd_ExecuteString('fs_rescan');
+}
+
 let clockInstalled = false;
 
 /**

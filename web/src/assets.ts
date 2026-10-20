@@ -29,12 +29,31 @@ async function download(url: string, onBytes: (n: number) => void): Promise<Uint
   return out;
 }
 
-/** Returns mount name ("base.pk3", "map_de_dust2.pk3", ...) -> bytes. */
-export async function loadBundles(onProgress: (done: number, total: number) => void): Promise<Map<string, Uint8Array>> {
-  const mres = await fetch('/manifest.json', { cache: 'no-cache' });
-  if (!mres.ok) throw new Error(`manifest.json: ${mres.status}`);
-  const manifest = (await mres.json()) as Manifest;
-  const items: [string, Bundle][] = [['base.pk3', manifest.base], ...Object.entries(manifest.maps).map(([m, b]): [string, Bundle] => [`map_${m}.pk3`, b])];
+let manifestOnce: Promise<Manifest> | undefined;
+function manifest(): Promise<Manifest> {
+  manifestOnce ??= fetch('/manifest.json', { cache: 'no-cache' }).then((r) => {
+    if (!r.ok) throw new Error(`manifest.json: ${r.status}`);
+    return r.json() as Promise<Manifest>;
+  });
+  manifestOnce.catch(() => (manifestOnce = undefined));
+  return manifestOnce;
+}
+
+/**
+ * Fetches the base bundle (if `withBase`) and the bundles of `maps`, only those: the catalog is too big to load
+ * whole. Returns mount name ("base.pk3", "map_de_dust2.pk3", ...) -> bytes.
+ */
+export async function loadBundles(
+  maps: string[],
+  withBase: boolean,
+  onProgress: (done: number, total: number) => void,
+): Promise<Map<string, Uint8Array>> {
+  const m = await manifest();
+  const items: [string, Bundle][] = maps.map((name): [string, Bundle] => {
+    if (!m.maps[name]) throw new Error(`the game files have no map ${name}`);
+    return [`map_${name}.pk3`, m.maps[name]];
+  });
+  if (withBase) items.unshift(['base.pk3', m.base]);
 
   const secure = typeof caches !== 'undefined' && typeof crypto !== 'undefined' && !!crypto.subtle;
   if (!secure) console.warn('Not a secure context: game files are neither verified nor cached. Use https or localhost.');
@@ -70,8 +89,8 @@ export async function loadBundles(onProgress: (done: number, total: number) => v
     }),
   );
 
-  if (cache) {
-    const live = new Set(items.map(([, b]) => urlOf(b)));
+  if (cache) { // forget bundles a new manifest no longer lists
+    const live = new Set([m.base, ...Object.values(m.maps)].map(urlOf));
     for (const req of await cache.keys()) if (!live.has(req.url)) await cache.delete(req);
   }
   return out;

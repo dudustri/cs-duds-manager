@@ -3,7 +3,7 @@
 import type { Xash3D } from 'xash3d-fwgs';
 import * as api from './api.ts';
 import { loadBundles } from './assets.ts';
-import { bootEngine, setName } from './engine.ts';
+import { bootEngine, mountMaps, setName } from './engine.ts';
 import { CONNECT_CMD, RelayTransport } from './transport.ts';
 import { $, errorText, setNote } from './ui.ts';
 
@@ -134,22 +134,57 @@ renderFullscreenButton();
 
 // ---- Engine and connection -------------------------------------------------------------------------------------
 
-// Engine boot, once per page: bundles first, then the wasm engine.
-function boot(): Promise<Xash3D> {
+const showDownload = (d: number, t: number) =>
+  setStage('download', `Downloading game files (${Math.round(d / 1e6)} / ${Math.round(t / 1e6)} MB)`, d / t);
+
+// Engine boot, once per page: the base bundle and the first map, then the wasm engine.
+function boot(firstMap: string): Promise<Xash3D> {
   booting ??= (async () => {
     // The engine takes its resolution from the canvas attributes once, at boot (it can't change it later), and
     // the game runs fullscreen: so boot at the screen's size; CSS scales it down in a smaller window.
     canvas.width = Math.max(320, screen.width);
     canvas.height = Math.max(240, screen.height);
     setStage('download', 'Downloading game files');
-    const bundles = await loadBundles((d, t) =>
-      setStage('download', `Downloading game files (${Math.round(d / 1e6)} / ${Math.round(t / 1e6)} MB)`, d / t),
-    );
+    const bundles = await loadBundles(firstMap ? [firstMap] : [], true, showDownload);
     setStage('engine', 'Starting engine');
-    return (engine = await bootEngine(canvas, bundles, transport, onEngineLog));
+    engine = await bootEngine(canvas, bundles, transport, onEngineLog);
+    if (firstMap) mapsMounted.set(firstMap, Promise.resolve());
+    return engine;
   })();
   booting.catch(() => (booting = undefined));
   return booting;
+}
+
+// Maps are fetched one at a time: on join, and when a map change finds the next one missing (see onEngineLog).
+const mapsMounted = new Map<string, Promise<void>>();
+function ensureMap(x: Xash3D, map: string, onProgress?: (d: number, t: number) => void): Promise<void> {
+  let p = mapsMounted.get(map);
+  if (!p) {
+    p = loadBundles([map], false, onProgress ?? (() => {})).then((b) => mountMaps(x, b));
+    p.catch(() => mapsMounted.delete(map));
+    mapsMounted.set(map, p);
+  }
+  return p;
+}
+const MISSING_MAP = /Could not load model maps\/([a-z0-9_.-]+)\.bsp/i;
+
+/** A map change to a map we don't have: fetch it behind the loading screen, then reconnect. */
+async function fetchMapAndRejoin(map: string): Promise<void> {
+  const x = engine;
+  if (!x || !state.roomId) return;
+  const my = setPhase('loading');
+  $('load-map').textContent = map;
+  $('load-sub').textContent = 'Map change';
+  setStage('download', 'Downloading map');
+  try {
+    await ensureMap(x, map, showDownload);
+    if (!isCurrent(my)) return;
+    setStage('join', 'Joining server');
+    x.Cmd_ExecuteString(CONNECT_CMD);
+    setTimeout(() => isCurrent(my) && state.phase === 'loading' && leave('Could not rejoin after the map change.', true), 45_000);
+  } catch (e) {
+    if (isCurrent(my)) leave(`Could not load ${map}: ${errorText(e)}`, true);
+  }
 }
 
 // The relay keeps the channel open when the server drops us, so the engine's own log tells us. Only svc_disconnect
@@ -158,6 +193,8 @@ const DROPPED = /Server issued disconnect\. Reason: (.*)/;
 const IN_GAME = 'cs-duds: in game'; // echoed by our server plugin (cs_duds_votes.sma) once the map has loaded
 function onEngineLog(line: string): void {
   if (line.includes(IN_GAME) && state.phase === 'loading' && state.roomId) return void setPhase('playing');
+  const missing = MISSING_MAP.exec(line);
+  if (missing && state.phase === 'playing') return void fetchMapAndRejoin(missing[1].toLowerCase());
   const m = DROPPED.exec(line);
   if (m && state.phase === 'playing') leave(`Disconnected: ${m[1].trim().slice(0, 100)}`, true);
 }
@@ -168,11 +205,13 @@ export const canManage = () => Boolean(hostToken()) || state.isAdmin;
 export const auth = (): api.Auth =>
   hostToken() ? api.hostAuth(hostToken()) : transport.sessionToken ? api.sessionAuth(transport.sessionToken) : undefined;
 
-export async function join(id: string, my: number): Promise<void> {
+export async function join(id: string, map: string, my: number): Promise<void> {
   state.roomId = id;
   teamChosen = false;
   try {
-    const x = await boot();
+    const x = await boot(map);
+    if (!isCurrent(my)) return;
+    await ensureMap(x, map, showDownload);
     if (!isCurrent(my)) return;
     setStage('join', 'Joining server');
     setNote('status', '');
@@ -206,7 +245,7 @@ export const hasTeam = () => teamChosen;
 /** `?boot`: start the engine without a room (debugging). */
 export function bootOnly(): void {
   const my = enterGame('', 'Starting');
-  void boot().then(() => isCurrent(my) && setPhase('playing'), (e) => backToLobby(`Engine failed to start: ${errorText(e)}`, true));
+  void boot('').then(() => isCurrent(my) && setPhase('playing'), (e) => backToLobby(`Engine failed to start: ${errorText(e)}`, true));
 }
 
 function leave(status = 'Not connected', bad = false): void {
