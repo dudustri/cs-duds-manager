@@ -15,7 +15,7 @@ test('create form sets the room size', async () => {
     await page.getByTestId('name-input').fill(uniqueName('size'));
     await page.getByTestId('map-select').selectOption('de_dust2');
     await page.getByTestId('mode-select').selectOption('classic');
-    await page.getByTestId('max-players-select').selectOption('10');
+    await page.getByTestId('max-players-custom').fill('10'); // custom size; the chips are 4/6/8/12/16/20/32
     const created = page.waitForResponse((r) => r.url().endsWith('/api/rooms') && r.request().method() === 'POST');
     await page.getByTestId('create-room').click();
     const body = await (await created).json();

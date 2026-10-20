@@ -36,8 +36,12 @@
         <select id="map" data-testid="map-select"></select>
         <label for="mode">Mode</label>
         <select id="mode" data-testid="mode-select"></select>
-        <label for="max-players">Players</label>
-        <select id="max-players" data-testid="max-players-select"></select>
+        <fieldset class="sizes">
+          <legend>Players</legend>
+          <div id="max-players"></div>
+          <input id="max-custom" data-testid="max-players-custom" type="number" min="2" max="32" step="1" inputmode="numeric"
+                 placeholder="Custom (2–32)" aria-label="Custom player count, 2 to 32">
+        </fieldset>
         <button id="create-room" data-testid="create-room" class="primary" type="submit">Create and play</button>
       </form>
       <p class="note" id="create-note" role="status"></p>

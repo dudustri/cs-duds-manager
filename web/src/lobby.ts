@@ -119,8 +119,26 @@ export async function loadCatalog(): Promise<void> {
     setNote('create-note', `Could not load maps and modes: ${errorText(e)}`, true);
   }
 }
-$<HTMLSelectElement>('max-players').replaceChildren(...Array.from({ length: 31 }, (_, i) => new Option(`${i + 2} players`, String(i + 2))));
-$<HTMLSelectElement>('max-players').value = '16';
+// Room size: one click on a common size, or a custom number (the input's min/max make the form reject anything but 2-32).
+const custom = $<HTMLInputElement>('max-custom');
+$('max-players').replaceChildren(
+  ...[4, 6, 8, 12, 16, 20, 32].map((n) => {
+    const l = document.createElement('label');
+    const i = document.createElement('input');
+    i.type = 'radio';
+    i.name = 'max-players';
+    i.value = String(n);
+    i.checked = n === 16;
+    i.dataset.testid = 'max-players-option';
+    i.onchange = () => (custom.value = '');
+    const s = document.createElement('span');
+    s.textContent = String(n);
+    l.append(i, s);
+    return l;
+  }),
+);
+custom.oninput = () => $('max-players').querySelectorAll('input').forEach((i) => (i.checked = !custom.value && i.value === '16'));
+const maxPlayers = () => Number(custom.value || $('max-players').querySelector<HTMLInputElement>('input:checked')?.value || 16);
 
 $('create').onsubmit = async (ev) => {
   ev.preventDefault();
@@ -129,7 +147,7 @@ $('create').onsubmit = async (ev) => {
   const my = enterGame(map, 'Creating room'); // synchronous: see enterGame
   setStage('download', 'Creating room');
   try {
-    const room = await api.createRoom(map, $<HTMLSelectElement>('mode').value, Number($<HTMLSelectElement>('max-players').value));
+    const room = await api.createRoom(map, $<HTMLSelectElement>('mode').value, maxPlayers());
     api.hostTokens.set(room.id, room.hostToken);
     void refreshRooms();
     if (isCurrent(my)) await join(room.id, my);

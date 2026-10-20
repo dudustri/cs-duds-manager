@@ -35,6 +35,20 @@ input, select {
   width: 100%; padding: 8px 10px; font: inherit; color: var(--ink); background: var(--bg);
   border: 1px solid var(--line); border-radius: 6px;
 }
+/* room size: radio chips + a custom number */
+.sizes { border: 0; padding: 0; margin: 12px 0 0; min-width: 0; }
+.sizes legend { color: var(--dim); padding: 0; margin-bottom: 4px; }
+#max-players { display: flex; gap: 5px; margin-bottom: 6px; }
+#max-players label { margin: 0; flex: 1; min-width: 0; }
+#max-players input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+#max-players span {
+  display: block; padding: 6px 0; text-align: center; font-weight: 600; color: var(--ink);
+  background: var(--raise); border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+}
+#max-players span:hover { background: #28313b; }
+#max-players input:checked + span { background: var(--sand); border-color: var(--sand); color: var(--sand-ink); }
+#max-players input:focus-visible + span { outline: 2px solid var(--sand); outline-offset: 2px; }
+#max-custom:invalid { border-color: var(--bad); }
 button {
   font: inherit; font-weight: 600; color: var(--ink); background: var(--raise); padding: 7px 14px; cursor: pointer;
   border: 1px solid var(--line); border-radius: 6px;

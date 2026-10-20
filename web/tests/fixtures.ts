@@ -12,7 +12,8 @@
 //   [data-testid=host-panel]                    only in the host's browser: [data-testid=player-row] per player (text = name)
 //     [data-testid=kick]                        inside a player-row
 //     [data-testid=vote-map-option][value=MAP]  checkboxes; [data-testid=vote-start] posts vote-map
-//   [data-testid=max-players-select]            room size 2..32 for create-room (default 16)       (Amendment A)
+//   [data-testid=max-players-option]            room-size chips 4/6/8/12/16/20/32 (radios; 16 checked) (Amendment A)
+//   [data-testid=max-players-custom]            custom room size 2..32; overrides the chips while filled
 //   [data-testid=game]                          the game container (canvas inside); F11 fullscreens THIS element
 //   [data-testid=game-overlay]                  inside game: visible while the pointer is NOT locked, hidden while
 //                                               locked; holds leave, fullscreen and (for the host) the host panel
