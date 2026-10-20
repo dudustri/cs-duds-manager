@@ -1,0 +1,1 @@
+cs_duds_zombie.amxx ; zombie infection, compiled from amxx/cs_duds_zombie.sma at build

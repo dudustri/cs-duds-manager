@@ -6,7 +6,7 @@
 #include <amxmodx>
 #include <amxmisc>
 
-#define MAX_MAPS 64
+#define MAX_MAPS 512 // the whole catalog: stock plus community maps
 
 // Room options the backend may pass in localinfo cs_duds_opts ("cvar/value/cvar/value..."; it validates them against
 // modes/<mode>/options.json). Anything else is ignored.

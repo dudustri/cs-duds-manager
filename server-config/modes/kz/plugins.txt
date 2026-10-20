@@ -1,0 +1,1 @@
+cs_duds_timer.amxx ; climb timer and no player damage, compiled from amxx/cs_duds_timer.sma at build

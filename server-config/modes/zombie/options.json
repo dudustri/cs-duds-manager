@@ -1,0 +1,5 @@
+[
+  {"cvar": "cs_duds_announcer", "label": "Kill announcer", "default": "1", "values": [["1", "On"], ["0", "Off"]]},
+  {"cvar": "mp_roundtime", "label": "Round time", "default": "5", "values": [["3", "3 min"], ["5", "5 min"]]},
+  {"cvar": "mp_startmoney", "label": "Start money", "default": "800", "values": [["800", "$800"], ["4000", "$4000"], ["16000", "$16000"]]}
+]

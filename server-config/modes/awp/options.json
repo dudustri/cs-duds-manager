@@ -1,0 +1,4 @@
+[
+  {"cvar": "cs_duds_announcer", "label": "Kill announcer", "default": "1", "values": [["1", "On"], ["0", "Off"]]},
+  {"cvar": "mp_roundtime", "label": "Round time", "default": "5", "values": [["1.75", "1:45"], ["3", "3 min"], ["5", "5 min"]]}
+]
