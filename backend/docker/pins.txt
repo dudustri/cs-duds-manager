@@ -20,3 +20,21 @@ gg-triple       https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8
 gg-welcome      https://raw.githubusercontent.com/fysiks1/amxx-gungame_cstrike/8024d1ef35cddf357ce18b277bde2c6422cab56d/resources/sound/gungame/gg_welcome.wav      1544afd42fc7926ce923ad499a264cec24e0aaae4884926d399457fc80956003
 # zBot profiles (BotProfile.db, BotChatter.db, radio sounds), ReGameDLL_CS @ 781a68ae1c6fb652cf4fbc894970b4fb4dde19f9 (tag 5.30.0.814), regamedll/extra/zBot/
 bot-profiles    https://raw.githubusercontent.com/rehlds/ReGameDLL_CS/781a68ae1c6fb652cf4fbc894970b4fb4dde19f9/regamedll/extra/zBot/bot_profiles.zip 39e6e8a137dbbbdef842cdb4318ef1069b3467127a0cc19bdc6eca1d5d693e38
+# Announcer sounds (classic Quake/UT pack), wav data only, from a CS 1.6 server tree mirror
+qs-dominating     https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/dominating.wav 8cf8fa1f85b1d329e08db4f467398f6a7724eb335acf7704aa81442b34df44ae
+qs-doublekill     https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/doublekill.wav 66e07ad6ba4ac978b401d717391d9be42d188123072c5883d4aa360ad79baed9
+qs-firstblood     https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/firstblood.wav 6882d8ce2fe548cc1f4464b594163196ebf0f550b03f61d8864b35ab973d5183
+qs-godlike        https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/godlike.wav 924c13260a1375484d7204b64e17c0cafe9ec4981fbb3e4cb51ead5ef2620596
+qs-headshot       https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/headshot.wav 50993616bcc6a18de917d83181e60fc38ab9da21a29fe6e06f0f6ac6b3353580
+qs-humiliation    https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/humiliation.wav 026c862bb145486d6c87a6426e864cf45f1dd750c6c194391d2717725064da52
+qs-killingspree   https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/killingspree.wav 57e11e963a7bff2d4f788b0ac9f65d7805ffb78ece44ecc40564b7b682411077
+qs-maytheforce    https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/maytheforce.wav c473b8f7e9d1ecb2742652061fd8ec994e918a029c8f6b435e229c09de566c43
+qs-megakill       https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/megakill.wav 6cf72ddf8e5c5fffe26811bfd49fd26534fa0449108037452a931401e17fab25
+qs-monsterkill    https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/monsterkill.wav 4aa258c88105f1e24f89b63f69a35c1d75c83d1c27d43cc948eba9b76bb3606d
+qs-multikill      https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/multikill.wav 526e1c99ee930cec729f269a916e983c18a3ce54449929f423953fb543c24b67
+qs-oneandonly     https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/oneandonly.wav 48076bac2987ca635b47e5cfded72e66058b0621bfd357c57c283227e1b398e3
+qs-prepare        https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/prepare.wav 65d97908d533dee98c912f63957c449efefbca639f3b1fb26f7e5987a3ea936e
+qs-rampage        https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/rampage.wav 42063b331c00467b919accce3602446a29b226ca8111a164192cee5d88e0765a
+qs-ultrakill      https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/ultrakill.wav 842fa328d92c91cc0bd0315f78b153006b6046cbf41341c63f74663b994f96b6
+qs-unstoppable    https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/unstoppable.wav df525291a6db921734fa19e64b4a95e884090eea3bf29bbd906a1ba2de7374f6
+qs-wickedsick     https://raw.githubusercontent.com/hpoon/HLDS-CS1.6/5953bf494f28bcf60bcbe94ed1416654ba6ab6be/cstrike/sound/misc/wickedsick.wav 8dbc96ba7961fed9d83ada3434ac5b61d41fac7a2d0c9f8ddd11e7eb2373a0b2

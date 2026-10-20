@@ -69,11 +69,19 @@ RUN ./amxxpc gungame.sma -o../plugins/gungame.amxx \
 COPY server-config/amxx/cs_duds_votes.sma ./cs_duds_votes.sma
 RUN ./amxxpc cs_duds_votes.sma -o../plugins/cs_duds_votes.amxx \
  && test -s ../plugins/cs_duds_votes.amxx && rm cs_duds_votes.sma
+COPY server-config/amxx/cs_duds_announcer.sma ./cs_duds_announcer.sma
+RUN ./amxxpc cs_duds_announcer.sma -o../plugins/cs_duds_announcer.amxx \
+ && test -s ../plugins/cs_duds_announcer.amxx && rm cs_duds_announcer.sma
 # The plugin precaches these sounds, so the server tree needs them.
 RUN mkdir -p /overlay/cstrike/sound/gungame \
  && for n in brass_bell knife_level levelup lostlead nade_level takenlead tiedlead triple welcome; do \
       fetch "gg-$n" "/overlay/cstrike/sound/gungame/gg_$n.wav"; \
     done
+RUN mkdir -p /overlay/cstrike/sound/misc \
+ && for n in $(awk '$1 ~ /^qs-/ { sub(/^qs-/, "", $1); print $1 }' "$PINS"); do \
+      fetch "qs-$n" "/overlay/cstrike/sound/misc/$n.wav"; \
+    done \
+ && test -f /overlay/cstrike/sound/misc/wickedsick.wav
 
 FROM golang:1.27@sha256:820153096fda4de6ac1b7194d12e416b7dd8f4e9a33d17e0345b111b945162d8 AS gobuild
 WORKDIR /src/backend
@@ -86,6 +94,8 @@ RUN CGO_ENABLED=0 go build -trimpath -ldflags=-s -o /out/ ./cmd/cs-backend ./cmd
 FROM hlds AS assets
 COPY --from=gobuild /out/package-assets /usr/local/bin/package-assets
 COPY server-config/maps.txt /tmp/maps.txt
+# the plugins' sounds (GunGame, announcer) go into the browser's base bundle too
+COPY --from=gungame /overlay/cstrike/sound/ /opt/hlds/cstrike/sound/
 RUN package-assets -content /opt/hlds -maps /tmp/maps.txt -out /out
 
 FROM node:24@sha256:14078204b6bb268c107ceff6d3c43f45a888105e5c2b18b14c32b3409d93a1b0 AS webbuild
@@ -132,10 +142,11 @@ RUN set -eu; \
     mkdir -p addons/amxmodx/configs/modes; \
     for d in modes/*/; do \
       m=$(basename "$d"); \
-      { cat addons/amxmodx/configs/plugins.ini; printf '\ncs_duds_votes.amxx\n'; [ ! -f "$d/plugins.txt" ] || cat "$d/plugins.txt"; } > "addons/amxmodx/configs/modes/$m.ini"; \
+      { cat addons/amxmodx/configs/plugins.ini; printf '\ncs_duds_votes.amxx\ncs_duds_announcer.amxx\n'; [ ! -f "$d/plugins.txt" ] || cat "$d/plugins.txt"; } > "addons/amxmodx/configs/modes/$m.ini"; \
       grep -q '^admin.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
       grep -q '^adminvote.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
       grep -q '^cs_duds_votes.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
+      grep -q '^cs_duds_announcer.amxx' "addons/amxmodx/configs/modes/$m.ini"; \
     done; \
     grep -q '^gungame.amxx' addons/amxmodx/configs/modes/gungame.ini; \
     rm -rf addons/amxmodx/scripting
