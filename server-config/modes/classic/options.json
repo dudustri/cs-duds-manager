@@ -1,0 +1,8 @@
+[
+  {"cvar": "cs_duds_announcer", "label": "Kill announcer", "default": "1", "values": [["1", "On"], ["0", "Off"]]},
+  {"cvar": "mp_friendlyfire", "label": "Friendly fire", "default": "0", "values": [["0", "Off"], ["1", "On"]]},
+  {"cvar": "mp_roundtime", "label": "Round time", "default": "5", "values": [["1.75", "1:45"], ["3", "3 min"], ["5", "5 min"]]},
+  {"cvar": "mp_freezetime", "label": "Freeze time", "default": "6", "values": [["0", "None"], ["3", "3 s"], ["6", "6 s"]]},
+  {"cvar": "mp_startmoney", "label": "Start money", "default": "800", "values": [["800", "$800"], ["4000", "$4000"], ["16000", "$16000"]]},
+  {"cvar": "mp_flashlight", "label": "Flashlight", "default": "0", "values": [["0", "Off"], ["1", "On"]]}
+]

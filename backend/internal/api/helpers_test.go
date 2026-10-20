@@ -106,6 +106,9 @@ func start(t *testing.T, mods ...func(*spec)) *harness {
 		dst := filepath.Join(hldsDir, "cstrike", "modes", m)
 		os.MkdirAll(dst, 0o755)
 		os.WriteFile(filepath.Join(dst, "mode.cfg"), b, 0o644)
+		if o, err := os.ReadFile(filepath.Join("testdata", m, "options.json")); err == nil {
+			os.WriteFile(filepath.Join(dst, "options.json"), o, 0o644)
+		}
 		os.MkdirAll(filepath.Join(hldsDir, "cstrike/addons/amxmodx/configs/modes"), 0o755)
 		os.WriteFile(filepath.Join(hldsDir, "cstrike/addons/amxmodx/configs/modes", m+".ini"), nil, 0o644)
 	}

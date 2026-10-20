@@ -71,6 +71,7 @@ type Room struct {
 	MaxPlayers int
 
 	mp        Map
+	set       Settings
 	hostToken string
 	port      int
 	addr      netip.AddrPort
@@ -163,11 +164,12 @@ func randBytes(n int) []byte {
 
 // Create starts hlds and returns once RCON answers and the mode's probe cvar matches. On any
 // failure (including ctx cancellation) the process is killed and the port freed before it returns.
-func (m *Manager) Create(ctx context.Context, mp Map, mode Mode, maxPlayers int) (*Room, error) {
+func (m *Manager) Create(ctx context.Context, mp Map, mode Mode, maxPlayers int, set Settings) (*Room, error) {
 	r, err := m.reserve(mp, mode, maxPlayers)
 	if err != nil {
 		return nil, err
 	}
+	r.set = set // before the supervisor starts: it reads it for argv
 	go m.supervise(r)
 	select {
 	case err = <-r.started:
@@ -185,7 +187,7 @@ func (m *Manager) Create(ctx context.Context, mp Map, mode Mode, maxPlayers int)
 // supervise is the room's only writer after creation and the single path that tears it down.
 func (m *Manager) supervise(r *Room) {
 	defer m.wg.Done()
-	cmd := exec.Command(m.cfg.HLDSBin, launchArgs(r.port, r.Mode, r.mp, r.rcon.password, r.MaxPlayers, r.ID)...)
+	cmd := exec.Command(m.cfg.HLDSBin, launchArgs(r.port, r.Mode, r.mp, r.set, r.rcon.password, r.MaxPlayers, r.ID)...)
 	cmd.Dir = m.cfg.HLDSDir
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // no Pdeathsig: init:true reaps on backend exit
 	cmd.Stdout = &logWriter{log: m.cfg.Log, id: r.ID, secret: r.rcon.password}
@@ -451,14 +453,18 @@ func voteReply(out string, err error) error {
 
 // launchArgs is pure; its inputs are typed. +sv_rcon_condebug 0 must precede the map so ReHLDS
 // never echoes the RCON password to its console.
-func launchArgs(port int, mode Mode, mp Map, rconPassword string, maxPlayers int, id string) []string {
-	return []string{
+func launchArgs(port int, mode Mode, mp Map, set Settings, rconPassword string, maxPlayers int, id string) []string {
+	args := []string{
 		"-game", "cstrike", "-port", strconv.Itoa(port), "-sport", strconv.Itoa(port + 10000), "-maxplayers", strconv.Itoa(maxPlayers),
 		"+ip", "127.0.0.1", "+rcon_password", rconPassword, "+sv_rcon_condebug", "0",
 		"+localinfo", "amxx_plugins", pluginList(mode.name),
 		"+localinfo", "amxx_configsdir", roomConfigsRel(id),
-		"+mapchangecfgfile", "modes/" + mode.name + "/mode.cfg", "+map", mp.name,
 	}
+	if set.s != "" { // our core plugin applies them on every map, after the cfg files (cs_duds_votes.sma)
+		args = append(args, "+localinfo", "cs_duds_opts", set.s)
+	}
+	// +map last: hlds ignores what follows it
+	return append(args, "+mapchangecfgfile", "modes/"+mode.name+"/mode.cfg", "+map", mp.name)
 }
 
 // logWriter forwards hlds output to the logger line by line, hiding the RCON password.

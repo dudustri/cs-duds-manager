@@ -19,6 +19,7 @@ new Float:g_lastKill[33];
 new bool:g_firstBlood;
 new g_lastMan; // 0 none, 1 "one and only" played, 2 duel played
 new g_hud;
+new g_enabled; // cs_duds_announcer: a room option (cs_duds_votes.sma applies it)
 
 public plugin_precache()
 {
@@ -41,6 +42,7 @@ public plugin_init()
 	register_event("DeathMsg", "on_death", "a");
 	register_logevent("on_round_start", 2, "1=Round_Start");
 	g_hud = CreateHudSyncObj();
+	g_enabled = register_cvar("cs_duds_announcer", "1");
 }
 
 public client_disconnected(id)
@@ -58,6 +60,7 @@ public on_round_start()
 
 announce(const fmt[], any:...)
 {
+	if (!get_pcvar_num(g_enabled)) return;
 	new text[96];
 	vformat(text, charsmax(text), fmt, 2);
 	set_hudmessage(255, 60, 40, -1.0, 0.25, 0, 0.0, 2.5, 0.1, 0.3, -1);
@@ -66,6 +69,7 @@ announce(const fmt[], any:...)
 
 play(id, const name[])
 {
+	if (!get_pcvar_num(g_enabled)) return;
 	client_cmd(id, "spk misc/%s", name);
 }
 

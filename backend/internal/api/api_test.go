@@ -767,3 +767,26 @@ func TestPlayersListOpenToRoomMembers(t *testing.T) {
 	h.expect(t, "GET", "/api/rooms/"+other.ID+"/players", nil, sess, 403, "not_host")
 	h.expect(t, "POST", "/api/rooms/"+r.ID+"/kick", map[string]int{"userid": 5}, sess, 403, "not_host")
 }
+
+// Room options: the catalog lists each mode's; create takes values from those lists only and passes them to hlds.
+func TestCreateOptions(t *testing.T) {
+	h := start(t)
+	var cat struct {
+		Options map[string][]struct{ Cvar string } `json:"options"`
+	}
+	json.Unmarshal(h.expect(t, "GET", "/api/catalog", nil, nil, 200, ""), &cat)
+	if len(cat.Options["classic"]) != 2 || cat.Options["classic"][0].Cvar != "mp_friendlyfire" || len(cat.Options["deathmatch"]) != 0 {
+		t.Fatalf("catalog options %+v", cat.Options)
+	}
+	body := func(opts any) map[string]any {
+		return map[string]any{"map": "de_dust2", "mode": "classic", "options": opts}
+	}
+	h.expect(t, "POST", "/api/rooms", body(map[string]string{"mp_friendlyfire": "1"}), nil, 201, "")
+	if a := readLines(h.argvLog); len(a) != 1 || tokenAfter(a[0], "cs_duds_opts") != "mp_friendlyfire/1/mp_roundtime/5" {
+		t.Fatalf("argv %q", a)
+	}
+	for _, bad := range []any{map[string]string{"mp_friendlyfire": "2"}, map[string]string{"sv_cheats": "1"},
+		map[string]string{"mp_roundtime": "5;quit"}, "nope"} {
+		h.expect(t, "POST", "/api/rooms", body(bad), nil, 400, "")
+	}
+}

@@ -124,7 +124,12 @@ func decode(w http.ResponseWriter, r *http.Request, v any) bool {
 }
 
 func (s *Server) catalog(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string][]string{"maps": s.cat.Maps(), "modes": s.cat.Modes()})
+	opts := map[string][]room.Option{}
+	for _, name := range s.cat.Modes() {
+		m, _ := s.cat.Mode(name)
+		opts[name] = m.Options()
+	}
+	writeJSON(w, 200, map[string]any{"maps": s.cat.Maps(), "modes": s.cat.Modes(), "options": opts})
 }
 
 func (s *Server) listRooms(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +139,8 @@ func (s *Server) listRooms(w http.ResponseWriter, r *http.Request) {
 func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Map, Mode  string
-		MaxPlayers *int // optional; a non-integer fails the decode
+		MaxPlayers *int              // optional; a non-integer fails the decode
+		Options    map[string]string // optional; cvar -> one of the mode's values (GET /api/catalog lists them)
 	}
 	if !decode(w, r, &req) {
 		return
@@ -156,6 +162,11 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "unknown_mode", "unknown mode")
 		return
 	}
+	set, err := mode.Settings(req.Options)
+	if err != nil {
+		writeErr(w, 400, "bad_option", err.Error())
+		return
+	}
 	// charged only for a room actually made: a full server or a failed start doesn't count against the caller
 	// shortcut: concurrent creates from one address can overshoot the burst, bounded by the room ports
 	ip := clientIP(r)
@@ -167,7 +178,7 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 429, "too_many_rooms", "you already have the maximum number of rooms running")
 		return
 	}
-	rm, err := s.rooms.Create(r.Context(), mp, mode, maxPlayers)
+	rm, err := s.rooms.Create(r.Context(), mp, mode, maxPlayers, set)
 	if err == nil {
 		s.createLm.allow(ip)
 		s.creatorsMu.Lock()

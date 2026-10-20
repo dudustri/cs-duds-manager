@@ -1,0 +1,6 @@
+[
+  {"cvar": "cs_duds_announcer", "label": "Kill announcer", "default": "1", "values": [["1", "On"], ["0", "Off"]]},
+  {"cvar": "mp_friendlyfire", "label": "Friendly fire", "default": "0", "values": [["0", "Off"], ["1", "On"]]},
+  {"cvar": "mp_respawn_immunitytime", "label": "Spawn protection", "default": "0", "values": [["0", "Off"], ["2", "2 s"], ["4", "4 s"]]},
+  {"cvar": "mp_flashlight", "label": "Flashlight", "default": "0", "values": [["0", "Off"], ["1", "On"]]}
+]

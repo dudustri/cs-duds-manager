@@ -1,0 +1,4 @@
+[
+  {"cvar": "mp_friendlyfire", "label": "Friendly fire", "default": "0", "values": [["0", "Off"], ["1", "On"]]},
+  {"cvar": "mp_roundtime", "label": "Round time", "default": "5", "values": [["3", "3 min"], ["5", "5 min"]]}
+]

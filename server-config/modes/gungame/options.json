@@ -1,0 +1,3 @@
+[
+  {"cvar": "cs_duds_announcer", "label": "Kill announcer", "default": "1", "values": [["1", "On"], ["0", "Off"]]}
+]

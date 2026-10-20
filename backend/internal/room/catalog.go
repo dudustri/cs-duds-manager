@@ -2,6 +2,7 @@ package room
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,8 +17,76 @@ var nameRe = regexp.MustCompile(`^[a-z0-9_]+$`)
 // RCON line is a catalog entry. The fields are unexported: room.Map("x; quit") does not compile.
 type Map struct{ name string }
 
-// Mode also carries the cvar that proves the mode cfg was applied (its `// probe` line).
-type Mode struct{ name, probeCvar, probeVal string }
+// Mode also carries the cvar that proves the mode cfg was applied (its `// probe` line) and the settings a room
+// creator may change (modes/<mode>/options.json, optional).
+type Mode struct {
+	name, probeCvar, probeVal string
+	options                   []Option
+}
+
+// Option is one room setting: a server cvar and the only values it may take.
+type Option struct {
+	Cvar    string      `json:"cvar"`
+	Label   string      `json:"label"`
+	Default string      `json:"default"`
+	Values  [][2]string `json:"values"` // [value, label]
+}
+
+// Settings are validated option values, ready for the room's argv; only Mode.Settings mints them.
+type Settings struct{ s string }
+
+var (
+	cvarRe  = regexp.MustCompile(`^[a-z_]{1,32}$`)
+	valueRe = regexp.MustCompile(`^[0-9a-z._-]{1,16}$`)
+)
+
+func (m Mode) Options() []Option { return m.options }
+
+// Settings checks the requested values against the mode's options (missing ones take their default) and
+// returns them as "cvar/value/cvar/value..." in option order (the engine's tokenizer splits on ',', ':' and '=', not
+// on '/'). An unknown option or value is an error.
+func (m Mode) Settings(req map[string]string) (Settings, error) {
+	parts := make([]string, 0, len(m.options))
+	for _, o := range m.options {
+		v, ok := req[o.Cvar]
+		if !ok {
+			v = o.Default
+		}
+		if !slices.ContainsFunc(o.Values, func(p [2]string) bool { return p[0] == v }) {
+			return Settings{}, fmt.Errorf("%s: %q is not one of its values", o.Cvar, v)
+		}
+		parts = append(parts, o.Cvar+"/"+v)
+	}
+	for k := range req {
+		if !slices.ContainsFunc(m.options, func(o Option) bool { return o.Cvar == k }) {
+			return Settings{}, fmt.Errorf("mode %s has no option %q", m.name, k)
+		}
+	}
+	return Settings{strings.Join(parts, "/")}, nil
+}
+
+func loadOptions(path string) ([]Option, error) {
+	b, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	var opts []Option
+	if err := json.Unmarshal(b, &opts); err != nil {
+		return nil, err
+	}
+	for _, o := range opts {
+		ok := cvarRe.MatchString(o.Cvar) && o.Label != "" && len(o.Values) > 0
+		for _, v := range o.Values {
+			ok = ok && valueRe.MatchString(v[0]) && v[1] != ""
+		}
+		if !ok || !slices.ContainsFunc(o.Values, func(p [2]string) bool { return p[0] == o.Default }) {
+			return nil, fmt.Errorf("bad option %+v", o)
+		}
+	}
+	return opts, nil
+}
 
 func (m Map) String() string  { return m.name }
 func (m Mode) String() string { return m.name }
@@ -71,7 +140,11 @@ func LoadCatalog(manifestPath, modesDir string) (*Catalog, error) {
 		if err != nil {
 			return nil, fmt.Errorf("mode %s: %w", d.Name(), err)
 		}
-		c.modes[d.Name()] = Mode{d.Name(), cvar, val}
+		opts, err := loadOptions(filepath.Join(modesDir, d.Name(), "options.json"))
+		if err != nil {
+			return nil, fmt.Errorf("mode %s: options.json: %w", d.Name(), err)
+		}
+		c.modes[d.Name()] = Mode{d.Name(), cvar, val, opts}
 	}
 	if len(c.maps) == 0 || len(c.modes) == 0 {
 		return nil, fmt.Errorf("catalog: %d maps, %d modes", len(c.maps), len(c.modes))

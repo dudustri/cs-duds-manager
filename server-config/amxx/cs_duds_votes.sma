@@ -7,6 +7,11 @@
 #include <amxmisc>
 
 #define MAX_MAPS 64
+
+// Room options the backend may pass in localinfo cs_duds_opts ("cvar/value/cvar/value..."; it validates them against
+// modes/<mode>/options.json). Anything else is ignored.
+new const OPTION_CVARS[][] = { "cs_duds_announcer", "mp_friendlyfire", "mp_roundtime", "mp_freezetime", "mp_startmoney",
+	"mp_flashlight", "mp_respawn_immunitytime" };
 #define ASK_COOLDOWN 30.0
 
 new g_maps[MAX_MAPS][32];
@@ -26,6 +31,7 @@ public plugin_init()
 
 public plugin_cfg()
 {
+	set_task(1.0, "apply_options"); // after game.cfg and the mode cfg, which run on every map
 	new file[64], line[64], len;
 	get_cvar_string("mapcyclefile", file, charsmax(file));
 	for (new i = 0; g_mapCount < MAX_MAPS && read_file(file, i, line, charsmax(line), len); i++)
@@ -40,6 +46,19 @@ public plugin_cfg()
 public client_putinserver(id)
 {
 	if (!is_user_bot(id)) client_cmd(id, "echo cs-duds: in game");
+}
+
+public apply_options()
+{
+	new opts[256], key[32], val[16];
+	get_localinfo("cs_duds_opts", opts, charsmax(opts));
+	while (opts[0])
+	{
+		strtok(opts, key, charsmax(key), opts, charsmax(opts), '/');
+		strtok(opts, val, charsmax(val), opts, charsmax(opts), '/');
+		for (new i = 0; i < sizeof(OPTION_CVARS); i++)
+			if (equal(key, OPTION_CVARS[i]) && cvar_exists(key)) set_cvar_string(key, val);
+	}
 }
 
 public client_disconnected(id)
