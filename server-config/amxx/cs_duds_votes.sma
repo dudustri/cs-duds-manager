@@ -39,6 +39,7 @@ public plugin_cfg()
 public client_disconnected(id)
 {
 	g_rtv[id] = false;
+	g_lastAsk[id] = 0.0; // the next player in this slot starts without a cooldown
 }
 
 bool:too_soon(id)
@@ -109,7 +110,7 @@ public cmd_say(id)
 	read_args(args, charsmax(args));
 	remove_quotes(args);
 	trim(args);
-	if (!equali(args, "/votekick", 9)) return PLUGIN_CONTINUE;
+	if (!equali(args, "/votekick", 9) || (args[9] != EOS && args[9] != ' ')) return PLUGIN_CONTINUE;
 	new target_name[64];
 	copy(target_name, charsmax(target_name), args[9]);
 	trim(target_name);
