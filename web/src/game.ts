@@ -150,7 +150,9 @@ function boot(): Promise<Xash3D> {
 // The relay keeps the channel open when the server drops us, so the engine's own log tells us. Only svc_disconnect
 // means *we* were dropped; "Server disconnected, reconnecting" (changelevel) and "<name> was kicked" do not.
 const DROPPED = /Server issued disconnect\. Reason: (.*)/;
+const IN_GAME = 'cs-duds: in game'; // echoed by our server plugin (cs_duds_votes.sma) once the map has loaded
 function onEngineLog(line: string): void {
+  if (line.includes(IN_GAME) && state.phase === 'loading' && state.roomId) return void setPhase('playing');
   const m = DROPPED.exec(line);
   if (m && state.phase === 'playing') leave(`Disconnected: ${m[1].trim().slice(0, 100)}`, true);
 }
@@ -173,7 +175,7 @@ export async function join(id: string, my: number): Promise<void> {
     if (!isCurrent(my)) return transport.close();
     x.Cmd_ExecuteString(CONNECT_CMD);
     if (hostToken()) x.Cmd_ExecuteString('bind F3 amxmodmenu');
-    setTimeout(() => isCurrent(my) && setPhase('playing'), 2500); // shortcut: no "in game" signal from the engine; revisit if the map still loads when this fires
+    setTimeout(() => isCurrent(my) && state.phase === 'loading' && leave('Could not join: the server did not let us in.', true), 45_000);
   } catch (e) {
     if (!isCurrent(my)) return;
     transport.close();

@@ -1,4 +1,4 @@
-/* cs-duds chat votes: "rtv" and "/votekick <name>" for every player.
+/* cs-duds chat votes: "rtv" and "/votekick <name>" for every player. Also tells the web client when it is in game.
  * Both only *start* the stock AMXX votes (adminvote.amxx) from the server console, so the whole room votes
  * and amx_vote_ratio / amx_vote_delay apply. Chat text never reaches a server command: maps come from the
  * mapcycle (generated from the catalog) and kicks are passed as a numeric #userid.
@@ -34,6 +34,12 @@ public plugin_cfg()
 		if (line[0] && line[0] != ';' && line[0] != '/' && is_map_valid(line))
 			copy(g_maps[g_mapCount++], charsmax(g_maps[]), line);
 	}
+}
+
+// The browser client has no "in game" event; this line in its console is how the page knows the map is loaded.
+public client_putinserver(id)
+{
+	if (!is_user_bot(id)) client_cmd(id, "echo cs-duds: in game");
 }
 
 public client_disconnected(id)
