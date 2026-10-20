@@ -148,11 +148,16 @@ func (s *Server) createRoom(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "unknown_mode", "unknown mode")
 		return
 	}
-	if !s.createLm.allow(clientIP(r)) {
+	// charged only for a room actually made: a full server or a failed start doesn't count against the caller
+	// shortcut: concurrent creates from one address can overshoot the burst, bounded by the room ports
+	if !s.createLm.has(clientIP(r)) {
 		writeErr(w, 429, "rate_limited", "too many rooms created, try again later")
 		return
 	}
 	rm, err := s.rooms.Create(r.Context(), mp, mode, maxPlayers)
+	if err == nil {
+		s.createLm.allow(clientIP(r))
+	}
 	switch {
 	case errors.Is(err, room.ErrFull):
 		writeErr(w, 503, "rooms_full", "no free room slot")
@@ -511,7 +516,12 @@ func newLimiter(burst int, every time.Duration) *ipLimiter {
 	return &ipLimiter{every: every, burst: burst, m: map[netip.Addr]*rate.Limiter{}}
 }
 
-func (l *ipLimiter) allow(ip netip.Addr) bool {
+func (l *ipLimiter) allow(ip netip.Addr) bool { return l.get(ip).Allow() }
+
+// has reports whether ip has a token left, without spending it.
+func (l *ipLimiter) has(ip netip.Addr) bool { return l.get(ip).Tokens() >= 1 }
+
+func (l *ipLimiter) get(ip netip.Addr) *rate.Limiter {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if len(l.m) > 1024 { // prune full buckets: they carry no information
@@ -526,5 +536,5 @@ func (l *ipLimiter) allow(ip netip.Addr) bool {
 		lim = rate.NewLimiter(rate.Every(l.every), l.burst)
 		l.m[ip] = lim
 	}
-	return lim.Allow()
+	return lim
 }

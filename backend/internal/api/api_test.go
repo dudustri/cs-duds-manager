@@ -724,3 +724,18 @@ func TestCommandsRateLimited(t *testing.T) {
 	}
 	t.Fatal("60 commands in a row were never rate limited")
 }
+
+// A create that fails on our side (no free port) gives the caller's token back.
+func TestFailedCreateIsNotCharged(t *testing.T) {
+	h := start(t, func(s *spec) {
+		s.cfg.Rooms.Ports = freePorts(t, 1)
+		s.cfg.CreateLimitBurst, s.cfg.CreateLimitEvery = 2, time.Hour
+	})
+	h.login(t)
+	a := h.create(t, "de_dust2", "classic")
+	for i := 0; i < 3; i++ {
+		h.expect(t, "POST", "/api/rooms", map[string]string{"map": "de_dust2", "mode": "classic"}, nil, 503, "rooms_full")
+	}
+	h.expect(t, "DELETE", "/api/rooms/"+a.ID, nil, h.adminHdr(), 204, "")
+	h.create(t, "de_dust2", "classic") // the second token is still there
+}
