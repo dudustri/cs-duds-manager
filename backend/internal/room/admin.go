@@ -27,8 +27,11 @@ const hostAdminLine = `"%s" "" "bcefju" "de"`
 
 func roomConfigsRel(id string) string { return "addons/amxmodx/rooms/" + id }
 
+// mapcycleRel is the room's map cycle, relative to cstrike/. Short on purpose: hlds cuts long mapcyclefile values.
+func mapcycleRel(id string) string { return "mapcycle_" + id + ".txt" }
+
 // mkConfigs gives the room its own AMXX configs dir: symlinks to the stock files plus its own users.ini, and its
-// mode's maps as maps.ini (AMXX map menus and votes) and mapcycle.txt (+mapcyclefile: rtv, nextmap).
+// mode's maps as maps.ini (AMXX map menus and votes) and a map cycle (+mapcyclefile: rtv, nextmap).
 func (m *Manager) mkConfigs(r *Room) error {
 	if err := os.MkdirAll(r.cfgDir, 0o755); err != nil {
 		return err
@@ -48,8 +51,9 @@ func (m *Manager) mkConfigs(r *Room) error {
 	}
 	if len(r.maps) > 0 {
 		list := []byte(strings.Join(r.maps, "\n") + "\n")
-		for _, f := range []string{"maps.ini", "mapcycle.txt"} {
-			if err := os.WriteFile(filepath.Join(r.cfgDir, f), list, 0o644); err != nil {
+		cstrike := filepath.Join(m.cfg.HLDSDir, "cstrike")
+		for _, f := range []string{filepath.Join(r.cfgDir, "maps.ini"), filepath.Join(cstrike, mapcycleRel(r.ID))} {
+			if err := os.WriteFile(f, list, 0o644); err != nil {
 				return err
 			}
 		}

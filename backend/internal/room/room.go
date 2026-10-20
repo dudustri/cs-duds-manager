@@ -221,6 +221,7 @@ func (m *Manager) supervise(r *Room) {
 		}
 	}
 	os.RemoveAll(r.cfgDir) // the room's AMXX configs, admins included
+	os.Remove(filepath.Join(m.cfg.HLDSDir, "cstrike", mapcycleRel(r.ID)))
 	m.mu.Lock()
 	delete(m.rooms, r.ID) // unlists and frees the port in one step
 	m.mu.Unlock()
@@ -264,7 +265,8 @@ func (m *Manager) live(r *Room, exited <-chan struct{}) {
 		case now := <-tick.C:
 			st, err := r.status(r.ctx)
 			if err != nil {
-				if fails++; fails == 3 { // wedged server
+				// wedged server; but zBot freezes it while it builds a map's first navigation mesh, so allow 2 minutes
+				if fails++; time.Duration(fails)*m.cfg.StatusEvery >= wedgedAfter && fails >= 3 {
 					return
 				}
 				continue
@@ -471,6 +473,9 @@ func voteReply(out string, err error) error {
 	return fmt.Errorf("vote: unexpected reply %q", out)
 }
 
+// wedgedAfter is how long a room may not answer status before it counts as hung and is stopped.
+const wedgedAfter = 2 * time.Minute
+
 // launchArgs is pure; its inputs are typed. +sv_rcon_condebug 0 must precede the map so ReHLDS
 // never echoes the RCON password to its console.
 func launchArgs(port int, mode Mode, mp Map, set Settings, rconPassword string, maxPlayers int, id string, withMaps bool) []string {
@@ -484,7 +489,7 @@ func launchArgs(port int, mode Mode, mp Map, set Settings, rconPassword string, 
 		args = append(args, "+localinfo", "cs_duds_opts", set.s)
 	}
 	if withMaps {
-		args = append(args, "+mapcyclefile", roomConfigsRel(id)+"/mapcycle.txt") // written by mkConfigs
+		args = append(args, "+mapcyclefile", mapcycleRel(id)) // written by mkConfigs
 	}
 	// +map last: hlds ignores what follows it
 	return append(args, "+mapchangecfgfile", "modes/"+mode.name+"/mode.cfg", "+map", mp.name)
