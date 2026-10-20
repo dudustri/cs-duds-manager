@@ -14,10 +14,6 @@ async function refreshControls(): Promise<void> {
   controls.dataset.testid = manage ? 'host-panel' : 'player-panel'; // host-panel exists only in the host's browser
   $('controls-h').textContent = manage ? 'Host controls' : 'Players';
   $('bots').hidden = !manage;
-  if (!manage) { // shortcut: GET /players is host/admin only, so players can't pick a Vote kick target yet
-    $('players').innerHTML = '<li class="dim">Only the host sees the player list.</li>';
-    return;
-  }
   try {
     const players = await api.listPlayers(id, auth());
     if (state.roomId !== id) return;
@@ -50,7 +46,7 @@ async function refreshControls(): Promise<void> {
         if (p.name !== me) {
           act('vote-kick', 'Vote kick', () => api.voteKick(id, p.userid, auth()), () => setNote('host-note', `Vote to kick ${p.name} started. Vote in game.`));
         }
-        act('kick', 'Kick', () => api.kick(id, p.userid, auth()), () => li.remove());
+        if (manage) act('kick', 'Kick', () => api.kick(id, p.userid, auth()), () => li.remove());
         return li;
       }),
     );

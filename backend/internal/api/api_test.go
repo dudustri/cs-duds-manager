@@ -751,3 +751,19 @@ func TestRoomsPerIP(t *testing.T) {
 	h.expect(t, "DELETE", "/api/rooms/"+a.ID, nil, h.adminHdr(), 204, "")
 	h.create(t, "de_dust2", "classic", ip("198.51.100.1")) // its room is gone, so it may create again
 }
+
+// Players in the room may list it (to pick a Vote kick target); outsiders and other rooms' tokens may not.
+func TestPlayersListOpenToRoomMembers(t *testing.T) {
+	h := start(t)
+	r := h.create(t, "de_dust2", "classic")
+	other := h.create(t, "de_nuke", "classic")
+	p, resp, err := testpeer.Dial(ctx15(t), h.url, r.ID)
+	if err != nil || resp.StatusCode != 201 {
+		t.Fatalf("dial: %v (%v)", err, resp)
+	}
+	t.Cleanup(func() { p.Close() })
+	sess := map[string]string{"Authorization": "Session " + resp.Header.Get("X-Session-Token")}
+	h.expect(t, "GET", "/api/rooms/"+r.ID+"/players", nil, sess, 200, "")
+	h.expect(t, "GET", "/api/rooms/"+other.ID+"/players", nil, sess, 403, "not_host")
+	h.expect(t, "POST", "/api/rooms/"+r.ID+"/kick", map[string]int{"userid": 5}, sess, 403, "not_host")
+}

@@ -258,9 +258,14 @@ func (s *Server) hostRoom(w http.ResponseWriter, r *http.Request) *room.Room {
 	return rm
 }
 
+// players is open to everyone in the room (they pick Vote kick targets from it); kicking stays host-only.
 func (s *Server) players(w http.ResponseWriter, r *http.Request) {
-	rm := s.hostRoom(w, r)
+	rm, who := s.caller(w, r)
 	if rm == nil {
+		return
+	}
+	if who == roleNone {
+		writeErr(w, 403, "not_host", "join the room to see its players")
 		return
 	}
 	ps, err := rm.Players(r.Context())
