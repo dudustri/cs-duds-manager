@@ -20,11 +20,9 @@ test('two windows join one classic de_dust2 room and stay in for 60 s', async ()
     expect(new Set(players.map((p) => p.steamid)).size).toBe(2); // ReUnion + sv_lan 0: distinct ids per session address
     for (const p of players) expect(p.steamid).toMatch(/^STEAM_/);
 
-    // each client's own `status` lists the other player
-    await xash(a, 'status');
-    await xash(b, 'status');
-    await expect.poll(() => logA.some((l) => l.includes(nameB)), { timeout: 30_000 }).toBe(true);
-    await expect.poll(() => logB.some((l) => l.includes(nameA)), { timeout: 30_000 }).toBe(true);
+    // each client's own `status` lists the other player (resent per attempt: a client still connecting drops it)
+    await expect.poll(async () => (await xash(a, 'status'), logA.some((l) => l.includes(nameB))), { timeout: 30_000, intervals: [2000] }).toBe(true);
+    await expect.poll(async () => (await xash(b, 'status'), logB.some((l) => l.includes(nameA))), { timeout: 30_000, intervals: [2000] }).toBe(true);
 
     // no SharedArrayBuffer / COOP / COEP needed
     expect(await a.evaluate(() => crossOriginIsolated)).toBe(false);
