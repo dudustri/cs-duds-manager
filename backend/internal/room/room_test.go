@@ -1,8 +1,10 @@
 package room
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -64,5 +66,18 @@ func TestLoadCatalogProbe(t *testing.T) {
 	os.Remove(filepath.Join(dir, "modes", "bad", "mode.cfg"))
 	if _, err := LoadCatalog(manifest, filepath.Join(dir, "modes")); err == nil {
 		t.Error("LoadCatalog accepted a mode directory without mode.cfg")
+	}
+}
+
+func TestLogWriterBoundsUnterminatedOutput(t *testing.T) {
+	var out strings.Builder
+	w := &logWriter{log: slog.New(slog.NewTextHandler(&out, nil)), id: "r", secret: "pw"}
+	w.Write([]byte(strings.Repeat("x", 3*maxLogLine)))
+	if len(w.buf) > maxLogLine {
+		t.Fatalf("buffered %d bytes of output with no newline", len(w.buf))
+	}
+	w.Write([]byte("pw done\n"))
+	if !strings.Contains(out.String(), "*** done") || strings.Contains(out.String(), "pw done") {
+		t.Fatalf("log: %s", out.String())
 	}
 }

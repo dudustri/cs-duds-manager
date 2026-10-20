@@ -462,6 +462,8 @@ func launchArgs(port int, mode Mode, mp Map, rconPassword string, maxPlayers int
 }
 
 // logWriter forwards hlds output to the logger line by line, hiding the RCON password.
+const maxLogLine = 4096
+
 type logWriter struct {
 	log    *slog.Logger
 	id     string
@@ -473,6 +475,10 @@ func (w *logWriter) Write(p []byte) (int, error) {
 	w.buf = append(w.buf, p...)
 	for {
 		i := bytes.IndexByte(w.buf, '\n')
+		if i < 0 && len(w.buf) > maxLogLine { // output with no newline: log it in pieces rather than grow forever
+			i = len(w.buf)
+			w.buf = append(w.buf, '\n')
+		}
 		if i < 0 {
 			return len(p), nil
 		}
