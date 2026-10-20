@@ -133,9 +133,10 @@ renderFullscreenButton();
 // Engine boot, once per page: bundles first, then the wasm engine.
 function boot(): Promise<Xash3D> {
   booting ??= (async () => {
-    const r = game.getBoundingClientRect(); // the engine sizes itself from the canvas attributes
-    canvas.width = Math.max(320, Math.round(r.width));
-    canvas.height = Math.max(240, Math.round(r.height));
+    // The engine takes its resolution from the canvas attributes once, at boot (it can't change it later), and
+    // the game runs fullscreen: so boot at the screen's size; CSS scales it down in a smaller window.
+    canvas.width = Math.max(320, screen.width);
+    canvas.height = Math.max(240, screen.height);
     setStage('download', 'Downloading game files');
     const bundles = await loadBundles((d, t) =>
       setStage('download', `Downloading game files (${Math.round(d / 1e6)} / ${Math.round(t / 1e6)} MB)`, d / t),
