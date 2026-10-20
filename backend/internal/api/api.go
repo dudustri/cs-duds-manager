@@ -180,15 +180,39 @@ func (s *Server) deleteRoom(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(204)
 }
 
-// hostRoom resolves the room (404) and checks the caller is its host or an admin (403).
-func (s *Server) hostRoom(w http.ResponseWriter, r *http.Request) *room.Room {
+// role is what the caller may do in a room, in increasing order.
+type role int
+
+const (
+	roleNone   role = iota
+	rolePlayer      // holds a live session token of this room (`Authorization: Session <token>`)
+	roleHost        // holds the room's host token (`Authorization: Bearer <token>`)
+	roleAdmin       // holds the admin cookie
+)
+
+// caller resolves the room (writing 404 and returning nil if it doesn't exist) and the caller's role in it.
+func (s *Server) caller(w http.ResponseWriter, r *http.Request) (*room.Room, role) {
 	rm, ok := s.rooms.Get(r.PathValue("id"))
 	if !ok {
 		writeErr(w, 404, "room_not_found", "no such room")
-		return nil
+		return nil, roleNone
 	}
-	tok, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !(tok != "" && rm.IsHost(tok)) && !s.isAdmin(r) {
+	scheme, tok, _ := strings.Cut(r.Header.Get("Authorization"), " ")
+	switch { // host before admin: a host who is also logged in as admin still gets host rights in-game
+	case tok != "" && scheme == "Bearer" && rm.IsHost(tok):
+		return rm, roleHost
+	case s.isAdmin(r):
+		return rm, roleAdmin
+	case tok != "" && scheme == "Session" && rm.HasSession(tok):
+		return rm, rolePlayer
+	}
+	return rm, roleNone
+}
+
+// hostRoom resolves the room (404) and checks the caller is its host or an admin (403).
+func (s *Server) hostRoom(w http.ResponseWriter, r *http.Request) *room.Room {
+	rm, who := s.caller(w, r)
+	if rm != nil && who < roleHost {
 		writeErr(w, 403, "not_host", "host or admin only")
 		return nil
 	}
@@ -291,13 +315,11 @@ func (s *Server) votes(w http.ResponseWriter, r *http.Request) {
 	if !s.cmdAllowed(w, r) {
 		return
 	}
-	rm, ok := s.rooms.Get(r.PathValue("id"))
-	if !ok {
-		writeErr(w, 404, "room_not_found", "no such room")
+	rm, who := s.caller(w, r)
+	if rm == nil {
 		return
 	}
-	scheme, tok, _ := strings.Cut(r.Header.Get("Authorization"), " ")
-	if !(scheme == "Session" && rm.HasSession(tok)) && !(scheme == "Bearer" && rm.IsHost(tok)) && !s.isAdmin(r) {
+	if who == roleNone {
 		writeErr(w, 403, "not_player", "join the room to start a vote")
 		return
 	}
@@ -367,9 +389,8 @@ func (s *Server) kickBots(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) session(w http.ResponseWriter, r *http.Request) {
-	rm, ok := s.rooms.Get(r.PathValue("id"))
-	if !ok {
-		writeErr(w, 404, "room_not_found", "no such room")
+	rm, who := s.caller(w, r)
+	if rm == nil {
 		return
 	}
 	offer, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxOffer))
@@ -382,8 +403,7 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Accept calls Attach synchronously, so token is set by the time it returns.
-	hostTok, _ := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	host := hostTok != "" && rm.IsHost(hostTok)
+	host := who == roleHost
 	var token string
 	attach := func(src netip.Addr) func() {
 		var end func()
