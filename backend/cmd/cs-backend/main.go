@@ -179,7 +179,11 @@ func serve(cfg api.Config, log *slog.Logger) error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
-	srv := &http.Server{Addr: listenAddr, Handler: s, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: listenAddr, Handler: s, ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: cfg.Rooms.ReadyTimeout + 30*time.Second, // POST /api/rooms answers only once the room is ready
+		IdleTimeout:  2 * time.Minute,
+	}
 	errc := make(chan error, 1)
 	go func() { errc <- srv.ListenAndServe() }()
 	log.Info("listening", "addr", listenAddr, "public_ip", cfg.Relay.PublicIP, "ice_port", cfg.Relay.ICEPort, "room_ports", len(cfg.Rooms.Ports))
