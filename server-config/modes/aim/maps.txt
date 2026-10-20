@@ -1,0 +1,3 @@
+# aim maps only
+aim_
+3d_aim

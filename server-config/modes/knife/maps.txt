@@ -1,0 +1,5 @@
+# knife maps only
+ka_
+knife_
+35hp
+1hp
