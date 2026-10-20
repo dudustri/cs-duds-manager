@@ -24,7 +24,6 @@ let joined = false; // in the room and past the loading screen
 let epoch = 0; // bumped on every enterGame/backToLobby so a late async step can tell it was cancelled
 let wantLock = false; // the player clicked the canvas; the engine's own pointer-lock requests don't count
 let busy = false; // between the click on Connect/Create and the end of joining
-let connectedAt = 0;
 let catalogMaps: string[] = [];
 let isAdmin = false;
 let rooms: api.Room[] = [];
@@ -181,11 +180,12 @@ function boot(): Promise<Xash3D> {
   return booting;
 }
 
-// The relay keeps the channel open when the server drops us, so the engine's own log tells us.
+// The relay keeps the channel open when the server drops us, so the engine's own log tells us. Only svc_disconnect
+// means *we* were dropped; "Server disconnected, reconnecting" (changelevel) and "<name> was kicked" do not.
+const DROPPED = /Server issued disconnect\. Reason: (.*)/;
 function onEngineLog(line: string): void {
-  if (roomId && joined && Date.now() - connectedAt > 2000 && /\b(kicked|disconnected)\b/i.test(line)) {
-    leave(`Disconnected: ${line.trim().slice(0, 100)}`, true);
-  }
+  const m = DROPPED.exec(line);
+  if (m && roomId && joined) leave(`Disconnected: ${m[1].trim().slice(0, 100)}`, true);
 }
 
 const hostToken = () => (roomId ? api.hostTokens.get(roomId) : undefined);
@@ -203,7 +203,6 @@ async function join(id: string, my: number): Promise<void> {
     setName(x, nameInput.value);
     await transport.open(id, api.hostAuth(hostToken()));
     if (epoch !== my) return transport.close();
-    connectedAt = Date.now();
     x.Cmd_ExecuteString(CONNECT_CMD);
     if (hostToken()) x.Cmd_ExecuteString('bind F3 amxmodmenu');
     setTimeout(() => epoch === my && loaded(), 2500); // shortcut: no "in game" signal from the engine; revisit if the map still loads when this fires
