@@ -402,15 +402,8 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 400, "bad_offer", "unreadable offer")
 		return
 	}
-	// Accept calls Attach synchronously, so token is set by the time it returns.
-	host := who == roleHost
-	var token string
-	attach := func(src netip.Addr) func() {
-		var end func()
-		token, end = rm.OpenSession(src, host)
-		return end
-	}
-	answer, err := s.relay.Accept(r.Context(), relay.Target{Addr: rm.Addr(), Done: rm.Done(), MaxSessions: rm.MaxPlayers + 4, Attach: attach},
+	sess := rm.NewSession(who == roleHost)
+	answer, err := s.relay.Accept(r.Context(), relay.Target{Addr: rm.Addr(), Done: rm.Done(), MaxSessions: rm.MaxPlayers + 4, Attach: sess.Attach},
 		clientIP(r), string(offer))
 	switch {
 	case errors.Is(err, relay.ErrTooManySessions):
@@ -421,7 +414,7 @@ func (s *Server) session(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, 500, "session_failed", "could not create the session")
 	default:
 		w.Header().Set("Content-Type", "application/sdp")
-		w.Header().Set("X-Session-Token", token)
+		w.Header().Set("X-Session-Token", sess.Token)
 		w.WriteHeader(201)
 		io.WriteString(w, answer)
 	}

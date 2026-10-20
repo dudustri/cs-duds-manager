@@ -70,26 +70,38 @@ func (r *Room) writeUsers() error {
 	return os.Rename(tmp, filepath.Join(r.cfgDir, "users.ini"))
 }
 
-// OpenSession registers a live session that holds the source address src and returns its vote token
-// and the function that ends it (idempotent). A host session also becomes an admin of this room.
-func (r *Room) OpenSession(src netip.Addr, host bool) (token string, end func()) {
-	token = base64.RawURLEncoding.EncodeToString(randBytes(32))
+// Session is a player's vote token for this room; it counts only while attached to a relay session.
+type Session struct {
+	Token string
+	r     *Room
+	host  bool
+}
+
+// NewSession makes the token up front. A host session also becomes an admin of this room once attached.
+func (r *Room) NewSession(host bool) *Session {
+	return &Session{Token: base64.RawURLEncoding.EncodeToString(randBytes(32)), r: r, host: host}
+}
+
+// Attach registers the session as live, holding the source address src, and returns the function that
+// ends it (idempotent). It fits relay.Target.Attach.
+func (s *Session) Attach(src netip.Addr) (end func()) {
+	r := s.r
 	r.sess.mu.Lock()
 	if r.sess.tokens == nil {
 		r.sess.tokens, r.sess.admins = map[string]struct{}{}, map[netip.Addr]struct{}{}
 	}
-	r.sess.tokens[token] = struct{}{}
-	if host {
+	r.sess.tokens[s.Token] = struct{}{}
+	if s.host {
 		r.sess.admins[src] = struct{}{}
 		r.adminsChanged()
 	}
 	r.sess.mu.Unlock()
 	var once sync.Once
-	return token, func() {
+	return func() {
 		once.Do(func() {
 			r.sess.mu.Lock()
 			defer r.sess.mu.Unlock()
-			delete(r.sess.tokens, token)
+			delete(r.sess.tokens, s.Token)
 			if _, ok := r.sess.admins[src]; ok {
 				delete(r.sess.admins, src)
 				r.adminsChanged()
