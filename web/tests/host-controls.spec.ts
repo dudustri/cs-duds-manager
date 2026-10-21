@@ -5,7 +5,7 @@ import { api, captureLog, joinFromList, profile, requireStack, setPlayerName, un
 requireStack();
 
 test('host creates a room, votes a map, kicks a player; empty room is reaped', async () => {
-  const hostCtx = await profile();
+  const hostCtx = await profile({ width: 1024, height: 768 }); // the team choice needs room for its buttons
   const guestCtx = await profile();
   let roomId = '';
   try {
@@ -23,7 +23,8 @@ test('host creates a room, votes a map, kicks a player; empty room is reaped', a
     roomId = (await api.listRooms()).find((r) => !before.has(r.id))!.id;
     await host.getByTestId('toast-join').click({ timeout: 60_000 }); // creating doesn't join; the toast offers it
 
-    // auto-joined, and the host panel lists us
+    // auto-joined: pick a side (the team choice covers the panel until then), and the host panel lists us
+    await host.getByTestId('team-ct').click({ timeout: 60_000 });
     const panel = host.getByTestId('host-panel');
     await expect(panel.getByTestId('player-row').filter({ hasText: hostName })).toBeVisible({ timeout: 300_000 });
 

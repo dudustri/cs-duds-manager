@@ -56,6 +56,7 @@ test('F11 fullscreens the game, click locks the mouse, Esc shows the overlay', a
     await page.locator(`[data-testid=room-list] [data-room-id="${room.id}"] [data-testid=connect]`).click();
     const game = page.getByTestId('game');
     await expect(game.locator('canvas')).toBeVisible({ timeout: 120_000 });
+    await page.getByTestId('team-ct').click({ timeout: 60_000 }); // in game, the team choice covers it first
 
     await page.keyboard.press('F11');
     await expect.poll(() => page.evaluate(() => (window as any).__calls)).toContain('fullscreen:game');
