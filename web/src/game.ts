@@ -4,7 +4,7 @@ import type { Xash3D } from 'xash3d-fwgs';
 import * as api from './api.ts';
 import { loadBundles } from './assets.ts';
 import { bootEngine, mountMaps, setName } from './engine.ts';
-import { myName } from './name.ts';
+import { myName, renewName } from './name.ts';
 import { CONNECT_CMD, RelayTransport } from './transport.ts';
 import { $, errorText, setNote } from './ui.ts';
 
@@ -217,6 +217,7 @@ export const auth = (): api.Auth =>
 export async function join(id: string, map: string, my: number): Promise<void> {
   state.roomId = id;
   teamChosen = false;
+  renewName();
   try {
     const x = await boot(map);
     if (!isCurrent(my)) return;

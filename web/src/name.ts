@@ -32,7 +32,8 @@ function mark(state: '' | 'ok' | 'taken'): void {
 }
 
 let toastTimer = 0;
-function toast(text: string): void {
+function toast(text: string, title = 'Name taken'): void {
+  $('name-toast-title').textContent = title;
   $('name-toast-text').textContent = text;
   $('name-toast').hidden = false;
   clearTimeout(toastTimer);
@@ -63,14 +64,18 @@ async function claimTyped(): Promise<void> {
     hold(await api.claimName(cleanName(input.value), token));
     $('name-toast').hidden = true;
   } catch (e) {
-    mark('taken');
-    toast(errorText(e));
+    const taken = e instanceof api.ApiError && e.code === 'name_taken';
+    mark(taken ? 'taken' : 'ok'); // anything else (offline, rate limited): Set stays offered for another try
+    toast(errorText(e), taken ? 'Name taken' : 'Name not set');
   }
 }
 setButton.onclick = () => void claimTyped();
 input.onkeydown = (ev) => {
   if (ev.key === 'Enter' && !setButton.hidden) void claimTyped();
 };
+
+/** Before each join: a claim lapses after a day without a page load, and a tab can stay open longer than that. */
+export const renewName = (): void => void api.claimName(mine, token).catch(() => {});
 
 let ready = Promise.resolve();
 /** Page load: renew our saved name, or claim a random one if we have none or someone took ours. */
