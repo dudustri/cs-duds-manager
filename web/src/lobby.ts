@@ -645,12 +645,16 @@ function hideToast(): void {
 $('toast-close').onclick = hideToast;
 $('toast-copy').onclick = async () => {
   const url = $<HTMLInputElement>('toast-url');
+  let copied = false;
   try {
     await navigator.clipboard.writeText(url.value);
-    $('toast-copy').textContent = 'Copied';
+    copied = true;
   } catch {
-    url.select(); // no clipboard permission: leave it selected for Ctrl+C
+    // plain http (the LAN server) has no navigator.clipboard; the old command still copies a selection on a click
+    url.select();
+    copied = document.execCommand('copy');
   }
+  $('toast-copy').textContent = copied ? 'Copied' : 'Press Ctrl+C';
   setTimeout(() => ($('toast-copy').textContent = 'Copy'), 2000);
 };
 
