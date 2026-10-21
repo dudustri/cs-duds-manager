@@ -75,7 +75,8 @@ input.onkeydown = (ev) => {
 };
 
 /** Before each join: a claim lapses after a day without a page load, and a tab can stay open longer than that. */
-export const renewName = (): void => void api.claimName(mine, token).catch(() => {});
+// Queued behind the page-load claim (and in front of a later Set), keeping the token the server answers with.
+export const renewName = (): void => void (ready = ready.then(() => api.claimName(mine, token).then((c) => hold(c, false), () => {})));
 
 let ready = Promise.resolve();
 /** Page load: renew our saved name, or claim a random one if we have none or someone took ours. */
