@@ -25,6 +25,8 @@ test('host creates a room, votes a map, kicks a player; empty room is reaped', a
 
     // auto-joined: pick a side (the team choice covers the panel until then), and the host panel lists us
     await host.getByTestId('team-ct').click({ timeout: 60_000 });
+    await host.evaluate(() => document.exitPointerLock()); // picking a side takes the mouse; Esc gives it back with the panel
+    await expect(host.getByTestId('game-overlay')).toBeVisible();
     const panel = host.getByTestId('host-panel');
     await expect(panel.getByTestId('player-row').filter({ hasText: hostName })).toBeVisible({ timeout: 300_000 });
 
