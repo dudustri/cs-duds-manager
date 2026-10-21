@@ -53,6 +53,12 @@ export interface OnlinePlayer { name: string; frags: number; room: string; map: 
 export const onlinePlayers = async (): Promise<OnlinePlayer[]> => (await call('GET', '/players')).json();
 export const createRoom = async (map: string, mode: string, maxPlayers: number, options: Record<string, string> = {}, host = ''): Promise<CreatedRoom> =>
   (await call('POST', '/rooms', { map, mode, maxPlayers, options, host })).json();
+/** Player names are unique: each is held by the token of the browser that claimed it (`Authorization: Name <token>`). */
+const nameAuth = (token: string): Auth => (token ? `Name ${token}` : undefined);
+export const nameAvailable = async (name: string, token: string): Promise<boolean> =>
+  ((await (await call('GET', `/names/${enc(name)}`, undefined, nameAuth(token))).json()) as { available: boolean }).available;
+export const claimName = async (name: string, token: string): Promise<{ name: string; token: string }> =>
+  (await call('POST', '/names', { name }, nameAuth(token))).json();
 export const deleteRoom = async (id: string): Promise<void> => void (await call('DELETE', `/rooms/${enc(id)}`));
 
 /** Authorization header value: the host's token, a player's session token, or none (admin cookie). */

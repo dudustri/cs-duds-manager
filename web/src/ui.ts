@@ -15,6 +15,8 @@ export const errorText = (e: unknown): string => {
       vote_running: 'A vote is already running.',
       vote_too_soon: 'A vote just ended. Wait a few seconds before starting another.',
       unknown_map: 'The server does not know that map.',
+      name_taken: 'Someone already plays under that name. Pick another one.',
+      bad_name: 'Names are 1-31 characters, without quotes, semicolons or backslashes.',
     };
     return known[e.code] ?? e.message;
   }

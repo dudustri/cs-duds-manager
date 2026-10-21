@@ -2,7 +2,7 @@
 // Headless Chromium can't really grab the mouse or the screen, so the browser APIs are stubbed and we assert
 // the page called them on the right element and reacts to the browser's lock events.
 import { expect, test } from '@playwright/test';
-import { api, profile, requireStack, uniqueName } from './fixtures.ts';
+import { api, profile, requireStack, setPlayerName, uniqueName } from './fixtures.ts';
 
 requireStack();
 
@@ -12,7 +12,7 @@ test('create form sets the room size', async () => {
   try {
     const page = await ctx.newPage();
     await page.goto('/#create'); // the create page
-    await page.getByTestId('name-input').fill(uniqueName('size'));
+    await setPlayerName(page, uniqueName('size'));
     await page.getByTestId('map-select').selectOption('de_dust2');
     await page.locator('[data-testid=mode-option][data-mode=classic]').click();
     await page.getByTestId('max-players-custom').fill('10'); // custom size; the chips are 4/6/8/12/16/20/32
@@ -52,7 +52,7 @@ test('F11 fullscreens the game, click locks the mouse, Esc shows the overlay', a
       };
     });
     await page.goto('/');
-    await page.getByTestId('name-input').fill(uniqueName('ui'));
+    await setPlayerName(page, uniqueName('ui'));
     await page.locator(`[data-testid=room-list] [data-room-id="${room.id}"] [data-testid=connect]`).click();
     const game = page.getByTestId('game');
     await expect(game.locator('canvas')).toBeVisible({ timeout: 120_000 });
@@ -97,7 +97,7 @@ test('Connect maximizes the game and shows a staged loading screen until in game
       }).observe(document, { subtree: true, childList: true, characterData: true });
     });
     await page.goto('/');
-    await page.getByTestId('name-input').fill(uniqueName('load'));
+    await setPlayerName(page, uniqueName('load'));
     await page.locator(`[data-testid=room-list] [data-room-id="${room.id}"] [data-testid=connect]`).click();
     // fullscreen must be requested within the click gesture, i.e. before bundles finish downloading
     expect(await page.evaluate(() => (window as any).__calls)).toContain('fullscreen:game');
@@ -130,7 +130,7 @@ test('lobby shows only the server list, creating is its own page; the game appea
     await expect(page.getByTestId('room-list')).toBeVisible();
     await expect(page.getByTestId('game')).toBeHidden();
     expect(await page.evaluate(() => (window as any).xash)).toBeUndefined(); // the engine has not booted
-    await page.getByTestId('name-input').fill(uniqueName('lobby'));
+    await setPlayerName(page, uniqueName('lobby'));
     await page.locator(`[data-testid=room-list] [data-room-id="${room.id}"] [data-testid=connect]`).click();
     await expect(page.getByTestId('game')).toBeVisible();
     await expect(page.getByTestId('room-list')).toBeHidden();

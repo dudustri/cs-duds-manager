@@ -20,6 +20,7 @@
     </nav>
     <label class="who">Playing as
       <input id="name" data-testid="name-input" maxlength="31" autocomplete="off" spellcheck="false">
+      <button id="name-set" data-testid="name-set" type="button" class="primary" hidden>Set</button>
     </label>
   </header>
   <p id="status" data-testid="status" role="status" class="banner"></p>
@@ -154,6 +155,14 @@
     <button id="toast-copy" type="button">Copy</button>
   </div>
   <button id="toast-join" data-testid="toast-join" type="button" class="primary join">Join now</button>
+</div>
+
+<div id="name-toast" class="toast bad" data-testid="name-toast" role="alert" hidden>
+  <div class="toast-head">
+    <strong>Name taken</strong>
+    <button id="name-toast-close" type="button" class="link" aria-label="Dismiss">×</button>
+  </div>
+  <p id="name-toast-text" class="toast-text"></p>
 </div>
 
 <div id="game" data-testid="game" hidden>
