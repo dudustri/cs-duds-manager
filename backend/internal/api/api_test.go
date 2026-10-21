@@ -820,3 +820,17 @@ func TestOnlinePlayers(t *testing.T) {
 		t.Fatalf("leaks ids or addresses: %s", raw)
 	}
 }
+
+// The host closes their own room with POST /stop; others can't.
+func TestHostStopsRoom(t *testing.T) {
+	h := start(t)
+	r := h.create(t, "de_dust2", "classic")
+	other := h.create(t, "de_nuke", "classic")
+	h.expect(t, "POST", "/api/rooms/"+r.ID+"/stop", nil, nil, 403, "not_host")
+	h.expect(t, "POST", "/api/rooms/"+r.ID+"/stop", nil, other.bearer(), 403, "not_host")
+	h.expect(t, "POST", "/api/rooms/"+r.ID+"/stop", nil, r.bearer(), 204, "")
+	if _, ok := h.has(t, r.ID); ok {
+		t.Fatal("room still listed after stop")
+	}
+	h.expect(t, "POST", "/api/rooms/"+r.ID+"/stop", nil, r.bearer(), 404, "room_not_found")
+}

@@ -90,6 +90,7 @@ func New(cfg Config) (*Server, error) {
 	s.mux.HandleFunc("POST /api/rooms/{id}/vote-map", s.voteMap)
 	s.mux.HandleFunc("POST /api/rooms/{id}/votes", s.votes)
 	s.mux.HandleFunc("POST /api/rooms/{id}/bots", s.addBot)
+	s.mux.HandleFunc("POST /api/rooms/{id}/stop", s.stopRoom)
 	s.mux.HandleFunc("DELETE /api/rooms/{id}/bots", s.kickBots)
 	s.mux.HandleFunc("POST /api/rooms/{id}/session", s.session)
 	s.mux.HandleFunc("POST /api/admin/login", s.login)
@@ -246,6 +247,19 @@ func (s *Server) mayHoldAnother(ip netip.Addr) bool {
 		}
 	}
 	return n < s.roomsPerIP
+}
+
+// stopRoom lets the room's host (or an admin) close it; it answers once the server process is gone.
+func (s *Server) stopRoom(w http.ResponseWriter, r *http.Request) {
+	rm := s.hostRoom(w, r)
+	if rm == nil {
+		return
+	}
+	if err := s.rooms.Stop(rm.ID); err != nil {
+		writeErr(w, 404, "room_not_found", "no such room")
+		return
+	}
+	w.WriteHeader(204)
 }
 
 func (s *Server) deleteRoom(w http.ResponseWriter, r *http.Request) {
