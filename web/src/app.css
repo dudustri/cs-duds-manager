@@ -88,6 +88,8 @@ a.button.primary:hover { background: #ffbe57; }
 .wordmark { font: 700 26px/1 var(--display); color: var(--ink); letter-spacing: .01em; }
 .who { display: flex; align-items: center; gap: 10px; margin: 0; }
 .who input { width: 200px; }
+.who input.ok { border-color: #3ccf6e; box-shadow: 0 0 0 2px rgba(60, 207, 110, .35); }
+.who input.taken { border-color: var(--bad); }
 .titlebar h1 { color: var(--ink); }
 .ver { color: var(--dim); }
 .banner { margin: 0; padding: 8px clamp(16px, 4vw, 40px); background: var(--raise); color: var(--hud); }
@@ -455,6 +457,8 @@ legend { color: var(--dim); padding: 0 4px; }
 .toast-share input { font-size: 13px; background: rgba(0, 0, 0, .35); border-color: #2e7d4a; }
 .toast .join { margin-top: 16px; background: #3ccf6e; border-color: #3ccf6e; color: #04150a; }
 .toast .join:hover:not(:disabled) { background: #5ce089; }
+.toast.bad { background: #2a120f; border-color: var(--bad); }
+.toast.bad .toast-head strong { color: var(--bad); }
 
 @media (prefers-reduced-motion: reduce) {
   .toast { animation: none; }

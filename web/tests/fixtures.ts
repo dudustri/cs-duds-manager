@@ -93,8 +93,18 @@ export function captureLog(page: Page): string[] {
 /** Lobby flow: open the list, set the name, click Connect on the room's row. */
 export async function joinFromList(page: Page, roomId: string, name: string): Promise<void> {
   await page.goto('/');
-  await page.getByTestId('name-input').fill(name);
+  await setPlayerName(page, name);
   await page.locator(`[data-room-id="${roomId}"]`).getByTestId('connect').click();
+}
+
+/** Types the name and claims it with Set (names are unique; the game plays under the claimed one). */
+export async function setPlayerName(page: Page, name: string): Promise<void> {
+  const box = page.getByTestId('name-input');
+  if ((await box.inputValue()) === name) return; // already ours: this profile claimed it on an earlier load
+  await box.fill(name);
+  await page.getByTestId('name-set').click();
+  await expect(page.getByTestId('name-set')).toBeHidden();
+  await expect(box).toHaveValue(name);
 }
 
 /** Polls the host API until exactly these names are listed (any order); returns the players. */

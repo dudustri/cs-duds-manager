@@ -3,7 +3,7 @@
 import * as api from './api.ts';
 import { backToLobby, enterGame, isCurrent, join, onChange, setStage, state } from './game.ts';
 import { $, errorText, setNote } from './ui.ts';
-import { cleanName } from './engine.ts';
+import { myName } from './name.ts';
 
 const MODE_NAME: Record<string, string> = {
   classic: 'Classic', deathmatch: 'Deathmatch', gungame: 'GunGame', ffa: 'Free for all', knife: 'Knife arena',
@@ -84,7 +84,7 @@ function mapThumb(map: string, cls: string): HTMLElement {
 
 /** Whether the server lists a player in that room under the name typed in the name box. */
 const nameTakenIn = (room: string | undefined) => {
-  const me = cleanName($<HTMLInputElement>('name').value).toLowerCase();
+  const me = myName().toLowerCase();
   return people.some((p) => p.room === room && p.name.toLowerCase() === me);
 };
 const joinRoom = (r: { id: string; map: string }) => {
@@ -92,7 +92,7 @@ const joinRoom = (r: { id: string; map: string }) => {
   // names are unique per server: the game would quietly rename a second "Bob" to "(1)Bob". The server's list lags a
   // few seconds, so right after we leave a room the name it still lists there is our own.
   if (r.id !== state.leftRoomId && nameTakenIn(r.id)) {
-    setNote('status', `Someone in that server already plays as "${cleanName($<HTMLInputElement>('name').value)}". Pick another name first.`, true);
+    setNote('status', `Someone in that server already plays as "${myName()}". Pick another name first.`, true);
     $('name').focus();
     return;
   }
@@ -383,7 +383,7 @@ function quickPlay(mode: string): void {
   setStage('download', 'Starting server');
   void (async () => {
     try {
-      const room = await api.createRoom(map, mode, 16, {}, $<HTMLInputElement>('name').value);
+      const room = await api.createRoom(map, mode, 16, {}, myName());
       api.hostTokens.set(room.id, room.hostToken);
       if (isCurrent(my)) await join(room.id, map, my);
     } catch (e) {
@@ -614,7 +614,7 @@ async function createServer(map: string, mode: string, size: number, options: Re
   button.textContent = 'Starting server…';
   setNote('create-note', '');
   try {
-    const room = await api.createRoom(map, mode, size, options, $<HTMLInputElement>('name').value);
+    const room = await api.createRoom(map, mode, size, options, myName());
     api.hostTokens.set(room.id, room.hostToken);
     history.pushState(null, '', `#room/${room.id}`);
     route();

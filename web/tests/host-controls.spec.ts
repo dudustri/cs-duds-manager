@@ -1,6 +1,6 @@
 // Phase 4 exit: create -> join -> vote map -> kick -> idle reap, through the UI.
 import { expect, test } from '@playwright/test';
-import { api, captureLog, joinFromList, profile, requireStack, uniqueName, waitForPlayers, xash } from './fixtures.ts';
+import { api, captureLog, joinFromList, profile, requireStack, setPlayerName, uniqueName, waitForPlayers, xash } from './fixtures.ts';
 
 requireStack();
 
@@ -15,7 +15,7 @@ test('host creates a room, votes a map, kicks a player; empty room is reaped', a
     const before = new Set((await api.listRooms()).map((r) => r.id));
 
     await host.goto('/#create'); // the create page
-    await host.getByTestId('name-input').fill(hostName);
+    await setPlayerName(host, hostName);
     await host.getByTestId('map-select').selectOption('de_dust2');
     await host.locator('[data-testid=mode-option][data-mode=classic]').click();
     await host.getByTestId('create-room').click();

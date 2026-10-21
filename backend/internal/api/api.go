@@ -52,7 +52,9 @@ type Server struct {
 	createLm *ipLimiter
 	loginLm  *ipLimiter
 	cmdLm    *ipLimiter // votes, kicks, bots: each one costs the game server RCON round trips
-	adminKey [32]byte   // random per process: admin cookies die with the process, like rooms
+	nameLm   *ipLimiter // name claims: one address can't squat on every name
+	names    names
+	adminKey [32]byte // random per process: admin cookies die with the process, like rooms
 	adminPw  []byte
 	mux      *http.ServeMux
 
@@ -75,6 +77,8 @@ func New(cfg Config) (*Server, error) {
 		createLm: newLimiter(cfg.CreateLimitBurst, cfg.CreateLimitEvery),
 		loginLm:  newLimiter(cfg.LoginLimitBurst, cfg.LoginLimitEvery),
 		cmdLm:    newLimiter(20, time.Second),
+		nameLm:   newLimiter(10, 3*time.Second),
+		names:    names{m: map[string]nameClaim{}},
 
 		roomsPerIP: cfg.RoomsPerIP,
 		creators:   map[string]netip.Addr{},
@@ -83,6 +87,8 @@ func New(cfg Config) (*Server, error) {
 	s.mux.HandleFunc("GET /api/catalog", s.catalog)
 	s.mux.HandleFunc("GET /api/rooms", s.listRooms)
 	s.mux.HandleFunc("GET /api/players", s.onlinePlayers)
+	s.mux.HandleFunc("GET /api/names/{name}", s.nameAvailable)
+	s.mux.HandleFunc("POST /api/names", s.claimName)
 	s.mux.HandleFunc("POST /api/rooms", s.createRoom)
 	s.mux.HandleFunc("DELETE /api/rooms/{id}", s.deleteRoom)
 	s.mux.HandleFunc("GET /api/rooms/{id}/players", s.players)

@@ -4,6 +4,7 @@ import type { Xash3D } from 'xash3d-fwgs';
 import * as api from './api.ts';
 import { loadBundles } from './assets.ts';
 import { bootEngine, mountMaps, setName } from './engine.ts';
+import { myName } from './name.ts';
 import { CONNECT_CMD, RelayTransport } from './transport.ts';
 import { $, errorText, setNote } from './ui.ts';
 
@@ -23,7 +24,6 @@ const game = $('game');
 const canvas = $<HTMLCanvasElement>('canvas');
 const loading = $('loading');
 const overlay = $('overlay');
-const nameInput = $<HTMLInputElement>('name');
 
 const transport = new RelayTransport();
 let engine: Xash3D | undefined;
@@ -224,7 +224,7 @@ export async function join(id: string, map: string, my: number): Promise<void> {
     if (!isCurrent(my)) return;
     setStage('join', 'Joining server');
     setNote('status', '');
-    setName(x, nameInput.value);
+    setName(x, myName());
     await transport.open(id, api.hostAuth(hostToken()));
     if (!isCurrent(my)) return transport.close();
     x.Cmd_ExecuteString('_vgui_menus 0'); // text menus: the server closes them itself when the overlay picks a team

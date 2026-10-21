@@ -1,11 +1,10 @@
 // The in-game overlay panel: players (with kick / vote kick), bots and map votes.
 import * as api from './api.ts';
-import { cleanName } from './engine.ts';
+import { myName } from './name.ts';
 import { auth, canManage, hasTeam, onChange, overlayOpen, pickTeam, state } from './game.ts';
 import { $, errorText, setNote } from './ui.ts';
 
 const controls = $('controls');
-const nameInput = $<HTMLInputElement>('name');
 
 async function refreshControls(): Promise<void> {
   const id = state.roomId;
@@ -18,7 +17,7 @@ async function refreshControls(): Promise<void> {
     const players = await api.listPlayers(id, auth());
     if (state.roomId !== id) return;
     setNote('host-note', '');
-    const me = cleanName(nameInput.value);
+    const me = myName();
     $('players').replaceChildren(
       ...players.map((p) => {
         const li = document.createElement('li');
