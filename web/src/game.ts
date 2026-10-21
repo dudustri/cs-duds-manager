@@ -14,6 +14,7 @@ declare const __LOADING_IMAGES__: string[]; // set by scripts/build.mjs from web
 export const state = {
   phase: 'lobby' as Phase,
   roomId: undefined as string | undefined, // the room we are connected to (or joining)
+  leftRoomId: undefined as string | undefined, // the room we last left, while the server may still list us in it
   isAdmin: false,
 };
 
@@ -51,6 +52,7 @@ function setPhase(next: Phase): number {
   loading.hidden = next !== 'loading';
   game.classList.toggle('is-loading', next === 'loading');
   if (next === 'lobby') {
+    state.leftRoomId = state.roomId ?? state.leftRoomId;
     state.roomId = undefined;
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     if (document.pointerLockElement) document.exitPointerLock();
