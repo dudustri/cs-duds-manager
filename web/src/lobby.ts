@@ -3,6 +3,7 @@
 import * as api from './api.ts';
 import { backToLobby, enterGame, isCurrent, join, onChange, setStage, state } from './game.ts';
 import { $, errorText, setNote } from './ui.ts';
+import { cleanName } from './engine.ts';
 
 const MODE_NAME: Record<string, string> = {
   classic: 'Classic', deathmatch: 'Deathmatch', gungame: 'GunGame', ffa: 'Free for all', knife: 'Knife arena',
@@ -83,6 +84,14 @@ function mapThumb(map: string, cls: string): HTMLElement {
 
 const joinRoom = (r: { id: string; map: string }) => {
   if (state.phase !== 'lobby') return;
+  // names are unique per server: the game would quietly rename a second "Bob" to "(1)Bob"
+  const me = cleanName($<HTMLInputElement>('name').value).toLowerCase();
+  if (people.some((p) => p.room === r.id && p.name.toLowerCase() === me)) {
+    setNote('status', `Someone in that server already plays as "${cleanName($<HTMLInputElement>('name').value)}". Pick another name first.`, true);
+    $('name').focus();
+    return;
+  }
+  setNote('status', '');
   hideToast();
   void join(r.id, r.map, enterGame(r.map, 'Joining')); // enterGame is synchronous, so the fullscreen request counts as part of the click
 };
@@ -97,11 +106,17 @@ function select(id: string | undefined): void {
   selected = id;
   renderRooms();
 }
+// the details float over the right edge (a modal on small screens): close with ×, the backdrop or Esc
+$('det-x').onclick = () => select(undefined);
+$('details-backdrop').onclick = () => select(undefined);
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && selected && state.phase === 'lobby') select(undefined);
+});
 
 function renderDetails(): void {
   const r = rooms.find((x) => x.id === selected); // an invite link may name a room the list hasn't loaded yet
   $('details').hidden = !r;
-  $('view-list').classList.toggle('has-details', Boolean(r));
+  $('details-backdrop').hidden = !r;
   if (!r) return;
   const art = $('det-art');
   art.style.setProperty('--h', String(hue(r.map)));
@@ -118,6 +133,7 @@ function renderDetails(): void {
   $('det-of').textContent = r.players === 1 ? 'player' : 'players';
   $('det-fill').style.width = `${Math.min(100, (r.players / r.maxPlayers) * 100)}%`;
   $('det-mode').textContent = modeName(r.mode);
+  $('det-mode').dataset.mode = r.mode;
   $('det-host').textContent = r.host || 'unknown';
   $('det-up').textContent = uptime(r);
   $('det-settings').replaceChildren(
@@ -133,6 +149,21 @@ function renderDetails(): void {
   b.textContent = isFull(r) ? 'Server is full' : 'Join server';
   b.disabled = isFull(r) || state.phase !== 'lobby';
   b.onclick = () => joinRoom(r);
+  const stop = $<HTMLButtonElement>('det-stop');
+  stop.hidden = !isMine(r);
+  stop.onclick = async () => {
+    if (!confirm(`Close the ${r.map} server? Everyone in it will be disconnected.`)) return;
+    stop.disabled = true;
+    try {
+      await api.stopRoom(r.id, api.hostAuth(api.hostTokens.get(r.id)));
+      selected = undefined;
+      await refreshRooms();
+    } catch (e) {
+      setNote('status', `Could not close the server: ${errorText(e)}`, true);
+    } finally {
+      stop.disabled = false;
+    }
+  };
 }
 
 // ---- Routes ----------------------------------------------------------------------------------------------------
@@ -246,7 +277,8 @@ function renderRooms(): void {
         if (isMine(r)) map.append(mineTag());
         tr.insertCell().append(map);
         const chip = document.createElement('span');
-        chip.className = 'chip';
+        chip.className = 'chip mode-chip';
+        chip.dataset.mode = r.mode;
         chip.textContent = modeName(r.mode);
         tr.insertCell().append(chip);
         const host = tr.insertCell();
@@ -276,7 +308,8 @@ function renderRooms(): void {
         const meta = document.createElement('p');
         meta.className = 'rc-meta';
         const chip = document.createElement('span');
-        chip.className = 'chip';
+        chip.className = 'chip mode-chip';
+        chip.dataset.mode = r.mode;
         chip.textContent = modeName(r.mode);
         const host = document.createElement('span');
         host.className = 'dim';

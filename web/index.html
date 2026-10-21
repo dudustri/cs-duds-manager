@@ -26,15 +26,10 @@
 
   <section class="hero" id="hero" aria-labelledby="hero-h">
     <div class="hero-text">
-      <p class="hero-kicker">The classic. Instantly.</p>
-      <h1 id="hero-h">Play CS 1.6<span>in your browser</span></h1>
-      <p class="hero-sub">No downloads. No installations.<br>Just open your browser and jump into the fight.</p>
+      <h1 id="hero-h">Rush B<span>with your crew</span></h1>
+      <p class="hero-sub">The old LAN party, one link away. Pick a mode, send the link to your friends, and please leave the chickens alone.</p>
       <h2 class="quick-h">Quick play</h2>
       <div id="quick-modes" class="quick-modes"></div>
-      <a class="browse" href="#servers-h" data-testid="browse-servers">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="5" rx="1"/><rect x="3" y="11" width="18" height="5" rx="1"/><path d="M7 6.5h.01M7 13.5h.01M3 20h18"/></svg>
-        <strong>Browse servers</strong><span>Choose your game</span>
-      </a>
       <dl class="stats">
         <div><span class="stat-dot" aria-hidden="true"></span><dd id="stat-players" data-testid="stat-players">0</dd><dt>Players online</dt></div>
         <div><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="7" rx="1"/><rect x="4" y="13" width="16" height="7" rx="1"/></svg><dd id="stat-servers" data-testid="stat-servers">0</dd><dt>Active servers</dt></div>
@@ -79,7 +74,9 @@
     </section>
 
     <aside class="side">
-      <section id="details" class="panel details" aria-labelledby="det-map" hidden>
+      <div id="details-backdrop" class="details-backdrop" hidden></div>
+      <section id="details" class="panel details" role="dialog" aria-labelledby="det-map" hidden>
+        <button id="det-x" type="button" class="det-x" aria-label="Close details">×</button>
         <div class="det-art" id="det-art"><img id="det-shot" alt=""></div>
         <div class="det-body">
           <h2 id="det-map" class="det-map"></h2>
@@ -92,6 +89,7 @@
           </dl>
           <dl class="det-facts" id="det-settings"></dl>
           <button id="det-join" data-testid="details-join" type="button" class="primary join">Join server</button>
+        <button id="det-stop" data-testid="close-server" type="button" class="danger stop" hidden>Close server</button>
           <p class="dim fine">You pick Terrorists or Counter-Terrorists once you're in.</p>
         </div>
       </section>
@@ -216,6 +214,7 @@
             <button id="bot-t" type="button" class="tt">Add bot T</button>
             <button id="bot-clear" type="button">Remove all bots</button>
           </div>
+          <button id="room-stop" data-testid="room-close-server" type="button" class="danger stop">Close server</button>
         </div>
         <fieldset>
           <legend>Vote for the next map (pick 1 to 4)</legend>

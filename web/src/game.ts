@@ -134,8 +134,13 @@ renderFullscreenButton();
 
 // ---- Engine and connection -------------------------------------------------------------------------------------
 
-const showDownload = (d: number, t: number) =>
-  setStage('download', `Downloading game files (${Math.round(d / 1e6)} / ${Math.round(t / 1e6)} MB)`, d / t);
+const showDownload = (d: number, t: number, step?: 'checking' | 'saving') =>
+  setStage(
+    'download',
+    step === 'checking' ? 'Checking the downloaded files' : step === 'saving' ? 'Saving the files for next time'
+      : `Downloading game files (${Math.round(d / 1e6)} / ${Math.round(t / 1e6)} MB)`,
+    d / t,
+  );
 
 // Engine boot, once per page: the base bundle and the first map, then the wasm engine.
 function boot(firstMap: string): Promise<Xash3D> {

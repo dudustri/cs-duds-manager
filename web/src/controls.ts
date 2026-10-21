@@ -94,3 +94,12 @@ const diff = () => Number($<HTMLSelectElement>('bot-diff').value);
 $('bot-ct').onclick = bots((id) => api.addBot(id, 'ct', diff(), auth()));
 $('bot-t').onclick = bots((id) => api.addBot(id, 't', diff(), auth()));
 $('bot-clear').onclick = bots((id) => api.removeBots(id, auth()));
+$('room-stop').onclick = async () => {
+  const id = state.roomId;
+  if (!id || !confirm('Close this server? Everyone in it will be disconnected.')) return;
+  try {
+    await api.stopRoom(id, auth());
+  } catch (e) {
+    setNote('host-note', `Could not close the server: ${errorText(e)}`, true);
+  }
+};

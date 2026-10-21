@@ -70,6 +70,7 @@ export const voteKick = async (id: string, userid: number, auth: Auth): Promise<
   void (await call('POST', `/rooms/${enc(id)}/votes`, { kind: 'kick', userid }, auth));
 export const addBot = async (id: string, team: 'ct' | 't', difficulty: number, auth: Auth): Promise<void> =>
   void (await call('POST', `/rooms/${enc(id)}/bots`, { team, difficulty }, auth));
+export const stopRoom = async (id: string, auth: Auth): Promise<void> => void (await call('POST', `/rooms/${enc(id)}/stop`, undefined, auth));
 export const removeBots = async (id: string, auth: Auth): Promise<void> =>
   void (await call('DELETE', `/rooms/${enc(id)}/bots`, undefined, auth));
 export const adminLogin = async (password: string): Promise<void> => void (await call('POST', '/admin/login', { password }));

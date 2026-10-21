@@ -9,23 +9,22 @@ const PARALLEL = 3;
 const hex = (buf: ArrayBuffer): string => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 const urlOf = (b: Bundle): string => new URL(b.file, document.baseURI).href;
 
-/** Fetches a bundle, reporting bytes as they arrive. */
-async function download(url: string, onBytes: (n: number) => void): Promise<Uint8Array<ArrayBuffer>> {
+/** Fetches a bundle of known size straight into one buffer (no second copy), reporting bytes as they arrive. */
+async function download(url: string, size: number, onBytes: (n: number) => void): Promise<Uint8Array<ArrayBuffer>> {
   const res = await fetch(url);
   if (!res.ok || !res.body) throw new Error(`download failed: ${url} (${res.status})`);
-  const chunks: Uint8Array[] = [];
-  let len = 0;
+  const out = new Uint8Array(size);
+  let at = 0;
   const reader = res.body.getReader();
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value);
-    len += value.length;
+    if (at + value.length > size) throw new Error(`download failed: ${url} is larger than the manifest says`);
+    out.set(value, at);
+    at += value.length;
     onBytes(value.length);
   }
-  const out = new Uint8Array(len);
-  let at = 0;
-  for (const c of chunks) (out.set(c, at), (at += c.length));
+  if (at !== size) throw new Error(`download failed: ${url} ended early (${at} of ${size} bytes)`);
   return out;
 }
 
@@ -46,7 +45,7 @@ function manifest(): Promise<Manifest> {
 export async function loadBundles(
   maps: string[],
   withBase: boolean,
-  onProgress: (done: number, total: number) => void,
+  onProgress: (done: number, total: number, step?: 'checking' | 'saving') => void,
 ): Promise<Map<string, Uint8Array>> {
   const m = await manifest();
   const items: [string, Bundle][] = maps.map((name): [string, Bundle] => {
@@ -73,10 +72,12 @@ export async function loadBundles(
       return;
     }
     let got = 0;
-    const bytes = await download(url, (n) => ((got += n), onProgress(done + got, total)));
+    const bytes = await download(url, b.size, (n) => ((got += n), onProgress(done + got, total)));
+    onProgress(done + got, total, 'checking');
     if (secure && hex(await crypto.subtle.digest('SHA-256', bytes)) !== b.sha256) {
       throw new Error(`${b.file}: sha256 mismatch`);
     }
+    onProgress(done + got, total, 'saving');
     await cache?.put(url, new Response(bytes));
     out.set(name, bytes);
     onProgress((done += b.size), total);
