@@ -452,7 +452,7 @@ legend { color: var(--dim); padding: 0 4px; }
 
 /* "server created" toast: green, bottom right, with Join and the invite link */
 .toast {
-  position: fixed; right: clamp(12px, 3vw, 32px); bottom: clamp(12px, 3vw, 32px); z-index: 20; width: min(400px, calc(100vw - 24px));
+  position: fixed; right: clamp(12px, 3vw, 32px); bottom: clamp(12px, 3vw, 32px); z-index: 40; width: min(400px, calc(100vw - 24px)); /* above the details modal (30) */
   padding: 18px 20px 20px; border-radius: 8px; background: #0f2a17; border: 1px solid #2e7d4a; box-shadow: 0 18px 40px rgba(0, 0, 0, .6);
   animation: toast-in .18s ease-out;
 }
