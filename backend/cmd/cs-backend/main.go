@@ -27,7 +27,7 @@ import (
 	"cs-duds/backend/internal/room"
 )
 
-const listenAddr = "127.0.0.1:8080" // Caddy's upstream; never published
+const listenAddr = "127.0.0.1:18468" // Caddy's upstream; never published
 
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "hash-password" {
