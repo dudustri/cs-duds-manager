@@ -82,11 +82,16 @@ function mapThumb(map: string, cls: string): HTMLElement {
   return box;
 }
 
+/** Whether the server lists a player in that room under the name typed in the name box. */
+const nameTakenIn = (room: string | undefined) => {
+  const me = cleanName($<HTMLInputElement>('name').value).toLowerCase();
+  return people.some((p) => p.room === room && p.name.toLowerCase() === me);
+};
 const joinRoom = (r: { id: string; map: string }) => {
   if (state.phase !== 'lobby') return;
-  // names are unique per server: the game would quietly rename a second "Bob" to "(1)Bob"
-  const me = cleanName($<HTMLInputElement>('name').value).toLowerCase();
-  if (people.some((p) => p.room === r.id && p.name.toLowerCase() === me)) {
+  // names are unique per server: the game would quietly rename a second "Bob" to "(1)Bob". The server's list lags a
+  // few seconds, so right after we leave a room the name it still lists there is our own.
+  if (r.id !== state.leftRoomId && nameTakenIn(r.id)) {
     setNote('status', `Someone in that server already plays as "${cleanName($<HTMLInputElement>('name').value)}". Pick another name first.`, true);
     $('name').focus();
     return;
@@ -420,6 +425,7 @@ export async function refreshRooms(): Promise<void> {
     rooms = await api.listRooms();
     ping = Math.round(performance.now() - t0);
     people = await api.onlinePlayers().catch(() => people);
+    if (!nameTakenIn(state.leftRoomId)) state.leftRoomId = undefined; // the server caught up
     setNote('list-note', '');
   } catch (e) {
     setNote('list-note', `Could not load servers: ${errorText(e)}. Retrying.`, true);
