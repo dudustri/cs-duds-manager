@@ -98,14 +98,14 @@ a.button.primary:hover { background: #ffbe57; }
 @media (max-width: 900px) { .lobby-grid { grid-template-columns: minmax(0, 1fr); } }
 /* hero: one click into a game and what's going on right now. The picture (web/img/hero.webp) is shown whole,
    fitted to the hero's height on the right, and fades into black on its left edge. */
-/* hero and server list: centred, up to 1560px, with side margins that grow with the window */
-.hero, .lobby-grid { width: min(1560px, calc(100% - 2 * clamp(16px, 4vw, 72px))); margin-inline: auto; }
+/* hero and server list: centred, up to 1320px, with side margins that grow with the window */
+.hero, .lobby-grid { width: min(1320px, calc(100% - 2 * clamp(16px, 7vw, 140px))); margin-inline: auto; }
 .hero {
   --go: var(--hud); position: relative; isolation: isolate; overflow: hidden; margin-top: 24px; padding: 30px 44px 28px;
   border: 1px solid #222; border-radius: 10px; background: #050505;
 }
 .hero::after {
-  content: ""; position: absolute; top: 0; right: 0; bottom: 0; z-index: -1; aspect-ratio: 1825 / 843;
+  content: ""; position: absolute; top: 0; right: 0; bottom: 0; z-index: -1; aspect-ratio: 1734 / 843;
   background: url("/img/hero.webp") right center / contain no-repeat;
   -webkit-mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .15) 18%, rgba(0, 0, 0, .7) 42%, #000 62%);
   mask-image: linear-gradient(90deg, transparent 0, rgba(0, 0, 0, .15) 18%, rgba(0, 0, 0, .7) 42%, #000 62%);
