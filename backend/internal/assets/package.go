@@ -47,6 +47,12 @@ var (
 	dropExts = map[string]bool{".so": true, ".dll": true, ".dylib": true, ".exe": true, ".nav": true}
 	// the server's liblist.gam names dlls/mp.dll; the browser engine writes its own pointing at its wasm server lib
 	dropFiles = map[string]bool{"liblist.gam": true}
+	// Half-Life content CS never plays: the soundtrack and video, and the single-player voices
+	dropPrefixes = []string{"media/", "sound/scientist/", "sound/barney/", "sound/hgrunt/", "sound/gman/", "sound/holo/",
+		"sound/tride/", "sound/vox/", "sound/fvox/"}
+	// textures most maps share stay in base.pk3; every other wad, and every sky, travels with the maps that use it
+	coreWads = map[string]bool{"cstrike.wad": true, "halflife.wad": true, "decals.wad": true, "fonts.wad": true,
+		"gfx.wad": true, "liquids.wad": true, "spraypaint.wad": true, "cached.wad": true}
 	modelRef  = regexp.MustCompile(`(?i)\.(mdl|spr)$`)
 	soundRef  = regexp.MustCompile(`(?i)\.wav$`)
 	skyFaces  = []string{"up", "dn", "lf", "rt", "ft", "bk"}
@@ -67,7 +73,7 @@ func scanTree(contentDir string) (map[string]string, error) {
 			}
 			rel, _ := filepath.Rel(root, p)
 			key := strings.ToLower(filepath.ToSlash(rel))
-			if dropDirs[strings.SplitN(key, "/", 2)[0]] || dropExts[path.Ext(key)] || dropFiles[key] {
+			if dropDirs[strings.SplitN(key, "/", 2)[0]] || dropExts[path.Ext(key)] || dropFiles[key] || dropped(key) {
 				return nil
 			}
 			t[key] = p
@@ -108,8 +114,10 @@ func PackageAll(contentDir string, maps []string, extraDir string, extraMaps []s
 	}
 	wadCache := map[string]map[string]struct{}{}
 	var missing []Missing
+	stockDeps := map[string][]string{}
 	for _, m := range maps {
-		mm, _, err := checkMap(t, m, wadCache)
+		mm, deps, err := checkMap(t, m, wadCache)
+		stockDeps[m] = deps
 		if err != nil {
 			return Manifest{}, nil, fmt.Errorf("%s: %w", m, err)
 		}
@@ -148,7 +156,7 @@ func PackageAll(contentDir string, maps []string, extraDir string, extraMaps []s
 			}
 			keys := ownFiles(all, m)
 			for _, d := range deps {
-				if _, stock := t[d]; !stock {
+				if _, stock := t[d]; !stock || mapScoped(d) {
 					keys = append(keys, d)
 				}
 			}
@@ -169,7 +177,7 @@ func PackageAll(contentDir string, maps []string, extraDir string, extraMaps []s
 	man := Manifest{Maps: map[string]Bundle{}}
 	var baseKeys []string
 	for k := range t {
-		if !strings.HasPrefix(k, "maps/") && !strings.HasPrefix(k, "overviews/") {
+		if !strings.HasPrefix(k, "maps/") && !strings.HasPrefix(k, "overviews/") && !mapScoped(k) {
 			baseKeys = append(baseKeys, k)
 		}
 	}
@@ -177,7 +185,13 @@ func PackageAll(contentDir string, maps []string, extraDir string, extraMaps []s
 		return Manifest{}, nil, err
 	}
 	for _, m := range maps {
-		if man.Maps[m], err = writePK3(tmp, t, ownFiles(t, m)); err != nil {
+		keys := ownFiles(t, m)
+		for _, d := range stockDeps[m] {
+			if mapScoped(d) {
+				keys = append(keys, d)
+			}
+		}
+		if man.Maps[m], err = writePK3(tmp, t, dedupe(keys)); err != nil {
 			return Manifest{}, nil, err
 		}
 	}
@@ -212,6 +226,15 @@ func PackageAll(contentDir string, maps []string, extraDir string, extraMaps []s
 		}
 	}
 	return man, skipped, nil
+}
+
+func dropped(key string) bool {
+	return slices.ContainsFunc(dropPrefixes, func(p string) bool { return strings.HasPrefix(key, p) })
+}
+
+// mapScoped: files that belong in the bundles of the maps that use them rather than in base.pk3.
+func mapScoped(key string) bool {
+	return strings.HasPrefix(key, "gfx/env/") || (strings.HasSuffix(key, ".wad") && !coreWads[key])
 }
 
 // cosmetic: what a community map can do without and still load: entries of its .res download list, its sky

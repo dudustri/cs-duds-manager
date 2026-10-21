@@ -218,6 +218,8 @@ func TestSplitAndManifest(t *testing.T) {
 	root := baseTree(t)
 	goodMap(t, root, "de_a")
 	goodMap(t, root, "de_b")
+	put(t, root, "valve/media/half-life01.mp3", filler("music"))         // Half-Life soundtrack: never shipped
+	put(t, root, "valve/sound/scientist/hello.wav", filler("scientist")) // Half-Life voices: never shipped
 	out := t.TempDir()
 	m, err := assets.Package(root, []string{"de_b", "de_a"}, out)
 	if err != nil {
@@ -246,9 +248,15 @@ func TestSplitAndManifest(t *testing.T) {
 	}
 	base := zipNames(t, basePath)
 	for _, want := range []string{"cstrike.wad", "halflife.wad", "sound/common.wav", "sound/valve_only.wav", "models/player.mdl",
-		"sprites/fire.spr", "gfx/env/desertup.tga", "sound/ambience/wind.wav"} {
+		"sprites/fire.spr", "sound/ambience/wind.wav"} {
 		if base[want] == nil {
 			t.Errorf("base.pk3 lacks %q (names are lowercase, cstrike over valve)", want)
+		}
+	}
+	// skies travel with the maps that use them; Half-Life's music and voices never ship
+	for _, never := range []string{"gfx/env/desertup.tga", "media/half-life01.mp3", "sound/scientist/hello.wav"} {
+		if base[never] != nil {
+			t.Errorf("base.pk3 holds %q", never)
 		}
 	}
 	if f := base["sound/common.wav"]; f != nil && !strings.HasPrefix(readZip(t, f), "cstrike") {
@@ -276,7 +284,12 @@ func TestSplitAndManifest(t *testing.T) {
 			got = append(got, name)
 		}
 		sort.Strings(got)
-		if want := []string{"maps/" + n + ".bsp", "maps/" + n + ".txt", "overviews/" + n + ".bmp"}; !reflect.DeepEqual(got, want) {
+		want := []string{"maps/" + n + ".bsp", "maps/" + n + ".txt", "overviews/" + n + ".bmp"}
+		for _, f := range sky {
+			want = append(want, "gfx/env/desert"+f+".tga") // its sky
+		}
+		sort.Strings(want)
+		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s bundle holds %v, want %v", n, got, want)
 		}
 	}
