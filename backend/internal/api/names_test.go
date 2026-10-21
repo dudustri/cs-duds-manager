@@ -41,6 +41,9 @@ func TestNames(t *testing.T) {
 	if claim("Alice", alice, 200, "") != alice { // renewing keeps the token
 		t.Fatal("renew changed the token")
 	}
+	if tok := claim("dave", alice+"x", 200, ""); tok == alice+"x" || len(tok) != len(alice) { // not one of ours: a new one
+		t.Fatalf("kept a client-made token %q", tok)
+	}
 	bob := claim("bob", "", 200, "")
 	claim("Bob", alice, 409, "name_taken")
 	if claim("Alice2", alice, 200, "") != alice || !available("Alice", bob) {

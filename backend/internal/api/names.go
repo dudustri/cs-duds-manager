@@ -64,10 +64,11 @@ func (n *names) claim(name, token string) (string, bool) {
 	return token, true
 }
 
-// nameToken reads `Authorization: Name <token>`.
+// nameToken reads `Authorization: Name <token>`. Anything but a token of ours (rand.Text: 26 characters) counts as
+// none, so a client can't make us keep a huge one for a day.
 func nameToken(r *http.Request) string {
 	scheme, tok, _ := strings.Cut(r.Header.Get("Authorization"), " ")
-	if scheme != "Name" {
+	if scheme != "Name" || len(tok) != 26 {
 		return ""
 	}
 	return tok
