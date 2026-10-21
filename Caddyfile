@@ -4,7 +4,7 @@
 
 {$SITE_ADDRESS:http://localhost} {
 	handle /api/* {
-		reverse_proxy 127.0.0.1:8080   # the backend; Caddy replaces any client-supplied X-Forwarded-For
+		reverse_proxy 127.0.0.1:18468   # the backend; Caddy replaces any client-supplied X-Forwarded-For
 	}
 	handle {
 		root * /srv

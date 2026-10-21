@@ -17,7 +17,7 @@ flowchart LR
 
     subgraph Host["host network (docker compose, network_mode: host)"]
         subgraph CaddyC["caddy container"]
-            Caddy["Caddy :80<br/>static page + /assets (immutable)<br/>proxy /api/* to 127.0.0.1:8080"]
+            Caddy["Caddy :80<br/>static page + /assets (immutable)<br/>proxy /api/* to 127.0.0.1:18468"]
         end
 
         subgraph Backend["backend container: one Go binary cs-backend"]
