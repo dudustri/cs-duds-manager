@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -63,8 +64,10 @@ func TestCatalogFromRealContent(t *testing.T) {
 	if !found {
 		t.Errorf("de_dust2 missing from %v", cat.Maps)
 	}
-	if !reflect.DeepEqual(cat.Modes, modes) {
-		t.Errorf("modes %v, want %v", cat.Modes, modes)
+	for _, want := range modes { // the original three are always there; more modes may be added
+		if !slices.Contains(cat.Modes, want) {
+			t.Errorf("modes %v lack %s", cat.Modes, want)
+		}
 	}
 }
 

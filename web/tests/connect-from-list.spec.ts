@@ -13,7 +13,7 @@ test('connect from the room list end to end', async () => {
     const row = page.locator(`[data-testid=room-list] [data-room-id="${room.id}"]`);
     await expect(row).toBeVisible({ timeout: 15_000 });
     await expect(row).toContainText('de_dust2');
-    await expect(row).toContainText('classic');
+    await expect(row).toContainText(/classic/i); // the lobby shows the mode's display name ("Classic")
     await expect(row).toContainText('0/16');
 
     const name = uniqueName('carol');
