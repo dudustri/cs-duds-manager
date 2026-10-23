@@ -82,12 +82,13 @@ export async function bootEngine(
   const put = async (path: string, bytes: Uint8Array) => fs.writeFile(path, bytes, { canOwn: true });
   fs.mkdirTree('/rodir/valve');
   fs.mkdirTree('/rodir/cstrike/cl_dlls');
-  // the engine dlopens these from its own folder and the game folder, like on a desktop
-  await Promise.all([
-    ...['filesystem_stdio.so', 'libref_gles3compat.so', 'valve/extras.pk3', 'cstrike/extras.pk3',
+  // the engine dlopens these .so files from its own folder and the game folder, like on a desktop; they are served
+  // as .wasm so the web server compresses them
+  await Promise.all(
+    ['filesystem_stdio.so', 'libref_gles3compat.so', 'valve/extras.pk3', 'cstrike/extras.pk3',
       'cstrike/cl_dlls/client_emscripten_wasm32.so', 'cstrike/cl_dlls/menu_emscripten_wasm32.so']
-      .map(async (f) => put(`/rodir/${f}`, await fetchBytes(f))),
-  ]);
+      .map(async (f) => put(`/rodir/${f}`, await fetchBytes(f.replace(/\.so$/, '.wasm')))),
+  );
   // The engine finds game directories by a real liblist.gam on disk; the copy inside base.pk3 is not enough.
   fs.writeFile('/rodir/cstrike/liblist.gam', LIBLIST);
   for (const [name, bytes] of bundles) await put(`/rodir/cstrike/${name}`, bytes);
