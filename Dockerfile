@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Stages: fetch -> hlds -> addons -> gungame -> gobuild -> extramaps -> assets -> teamart -> webbuild -> server
+# Stages: fetch -> hlds -> addons -> gungame -> gobuild -> extramaps -> assets -> teamart -> engine -> webbuild -> server
 #         -> backend -> caddy.
 # Every third-party download goes through scripts/fetch and backend/docker/pins.txt (name, url, sha256).
 # Every base image is pinned by digest. Targets: `backend` and `caddy` (see compose.yaml).
@@ -128,13 +128,41 @@ RUN apt-get update && apt-get install -y --no-install-recommends imagemagick && 
     done \
  && test -s /out/teams/gign.webp
 
+# The browser engine, compiled from source: Xash3D FWGS and cs16-client from the pinned submodules in third_party/
+# (never prebuilt binaries), plus our build fixes in engine/patches/ and the WebRTC network glue engine/net.js.
+# Only what the page loads is kept: the engine, its file system and WebGL 2 renderer, the CS client and menu, and
+# the menu art. No server code, bots, training maps or touch controls.
+FROM emscripten/emsdk:6.0.12@sha256:77638e6c215a65f25a704c0c831d5c2463a8c0468a58c6cb82489dbe621dfa05 AS engine
+WORKDIR /src
+COPY third_party/ third_party/
+COPY engine/ engine/
+RUN cd third_party/xash3d-fwgs && for p in /src/engine/patches/xash3d-fwgs/*.patch; do patch -p1 < "$p"; done \
+ && cd ../cs16-client && for p in /src/engine/patches/cs16-client/*.patch; do patch -p1 < "$p"; done
+RUN cd third_party/xash3d-fwgs \
+ && XASH_BUILD_DATE="$(date -u '+%Y-%m-%d %H:%M:%S +0000')" \
+    CC=emcc CXX=em++ AR=emar RANLIB=emranlib python3 ./waf configure -T release --emscripten --enable-gles3compat --disable-gl \
+ && python3 ./waf build -j"$(nproc)"
+RUN cd third_party/cs16-client \
+ && emcmake cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SERVER=OFF -DMAINUI_USE_STB=ON \
+ && cmake --build build -j"$(nproc)"
+RUN x=third_party/xash3d-fwgs/build && c=third_party/cs16-client/build && o=/out/engine \
+ && mkdir -p $o/valve $o/cstrike/cl_dlls \
+ && cp $x/engine/xash $o/xash.js && cp $x/engine/xash.wasm $x/filesystem/filesystem_stdio.so $x/ref/gl/libref_gles3compat.so $o/ \
+ && cp $x/3rdparty/extras/extras.pk3 $o/valve/extras.pk3 \
+ && cp $c/cl_dll/client_emscripten_wasm32.so $c/3rdparty/mainui_cpp/menu_emscripten_wasm32.so $o/cstrike/cl_dlls/ \
+ && cd third_party/cs16-client/3rdparty/cs16client-extras \
+ && python3 -c 'import os,sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"w",zipfile.ZIP_DEFLATED); [z.write(os.path.join(d,f)) for d,_,fs in os.walk("gfx") for f in fs]' $o/cstrike/extras.pk3
+# served under a hash of its files, so browsers may cache it forever and a rebuilt engine gets a new URL
+RUN v=$(cd /out/engine && find . -type f | sort | xargs sha256sum | sha256sum | cut -c1-16) \
+ && mkdir /out/srv && mv /out/engine /out/srv/$v && echo "/engine/$v/" > /out/engine-path
+
 FROM node:24@sha256:14078204b6bb268c107ceff6d3c43f45a888105e5c2b18b14c32b3409d93a1b0 AS webbuild
 WORKDIR /web
 COPY web/package.json web/package-lock.json* ./
-COPY web/vendor ./vendor
 RUN npm ci --ignore-scripts
 COPY web/ ./
-RUN npm run build
+COPY --from=engine /out/engine-path /tmp/engine-path
+RUN ENGINE_PATH="$(cat /tmp/engine-path)" npm run build
 
 # The assembled server tree: stock + overlay + our config.
 FROM hlds AS server
@@ -171,6 +199,7 @@ ENTRYPOINT ["cs-backend"]
 FROM caddy:2.11@sha256:685ae3d7c34d9b5f8caeddc5d14051db7bbd88ff1f5a2fa0c16bd8ca328fb7af AS caddy
 COPY Caddyfile /etc/caddy/Caddyfile
 COPY --from=webbuild /web/dist/ /srv/
+COPY --from=engine /out/srv/ /srv/engine/
 COPY --from=teamart /out/teams/ /srv/img/teams/
 COPY --from=assets /out/assets/ /srv/assets/
 COPY --from=assets /out/manifest.json /srv/manifest.json

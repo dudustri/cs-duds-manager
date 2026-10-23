@@ -1,4 +1,4 @@
-.git
+**/.git
 .claude-pipeline
 .env
 **/node_modules
@@ -7,3 +7,9 @@ web/test-results
 web/playwright-report
 test-results
 *.md
+# engine sources: parts the browser build never compiles or ships (server game code, bots, training content)
+third_party/cs16-client/3rdparty/yapb
+third_party/cs16-client/3rdparty/ReGameDLL_CS
+third_party/cs16-client/3rdparty/cs16client-extras/sound
+third_party/cs16-client/3rdparty/cs16client-extras/maps
+third_party/xash3d-fwgs/3rdparty/bzip2/bzip2/tests

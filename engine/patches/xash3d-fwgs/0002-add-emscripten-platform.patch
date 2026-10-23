@@ -1,0 +1,55 @@
+diff --git a/3rdparty/library_suffix/include/build.h b/3rdparty/library_suffix/include/build.h
+index b92c51e..55c095d 100644
+--- a/3rdparty/library_suffix/include/build.h
++++ b/3rdparty/library_suffix/include/build.h
+@@ -89,6 +89,7 @@ Then you can use another oneliner to query all variables:
+ #undef XASH_SUNOS
+ #undef XASH_TERMUX
+ #undef XASH_WASI
++#undef XASH_EMSCRIPTEN
+ #undef XASH_WASM
+ #undef XASH_WIN32
+ #undef XASH_X86
+@@ -142,6 +143,8 @@ Then you can use another oneliner to query all variables:
+ 		#define XASH_NSWITCH 1
+ 	#elif defined __vita__
+ 		#define XASH_PSVITA 1
++	#elif defined __EMSCRIPTEN__
++		#define XASH_EMSCRIPTEN 1
+ 	#elif defined __wasi__
+ 		#define XASH_WASI 1
+ 	#elif defined __sun__
+diff --git a/3rdparty/library_suffix/include/buildenums.h b/3rdparty/library_suffix/include/buildenums.h
+index c91f5e6..8f16580 100644
+--- a/3rdparty/library_suffix/include/buildenums.h
++++ b/3rdparty/library_suffix/include/buildenums.h
+@@ -61,6 +61,7 @@ For more information, please refer to <http://unlicense.org/>
+ #define PLATFORM_PSP        18
+ #define PLATFORM_IOS    	19
+ #define PLATFORM_PS4        20
++#define PLATFORM_EMSCRIPTEN 21
+ 
+ #if XASH_WIN32
+ 	#define XASH_PLATFORM PLATFORM_WIN32
+@@ -90,6 +91,8 @@ For more information, please refer to <http://unlicense.org/>
+ 	#define XASH_PLATFORM PLATFORM_NSWITCH
+ #elif XASH_PSVITA
+ 	#define XASH_PLATFORM PLATFORM_PSVITA
++#elif XASH_EMSCRIPTEN
++	#define XASH_PLATFORM PLATFORM_EMSCRIPTEN
+ #elif XASH_WASI
+ 	#define XASH_PLATFORM PLATFORM_WASI
+ #elif XASH_SUNOS
+diff --git a/3rdparty/library_suffix/src/library_suffix.c b/3rdparty/library_suffix/src/library_suffix.c
+index 8f2b21a..62eb987 100644
+--- a/3rdparty/library_suffix/src/library_suffix.c
++++ b/3rdparty/library_suffix/src/library_suffix.c
+@@ -71,6 +71,8 @@ const char *Q_PlatformStringByID( const int platform )
+ 		return "nswitch";
+ 	case PLATFORM_PSVITA:
+ 		return "psvita";
++	case PLATFORM_EMSCRIPTEN:
++		return "emscripten";
+ 	case PLATFORM_WASI:
+ 		return "wasi";
+ 	case PLATFORM_SUNOS:
