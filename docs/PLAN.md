@@ -62,7 +62,7 @@ file a map needs is there.
 | Rooms | Create, join from a list or an invite link, host controls, room options per mode |
 | In game | Team picker outside the game, full screen, mouse lock, overlay with players, bots and votes |
 | Modes | Classic, deathmatch, free for all, GunGame, zombie, aim, AWP, knife, surf, climb |
-| Maps | About 245 maps. Surf, climb, knife, aim and AWP maps only appear in their own mode |
+| Maps | About 300 maps. Surf, climb, knife, aim and AWP maps only appear in their own mode |
 | Sounds | Kill announcer (first blood, headshot, multi kills, killing sprees), GunGame sounds |
 | Safety | Rate limits per address, a cap of live rooms per address, host and admin tokens |
 | Tests | Go unit and API tests, tests against the real stack, browser tests with Playwright |
@@ -79,7 +79,7 @@ pinned by git commit in `third_party/`, and every base image by digest.
 | AMX Mod X | Official 1.9 release |
 | GunGame | Plugin source, compiled during the build |
 | Our plugins | Chat votes, kill announcer, climb timer and zombie, in `server-config/amxx/` |
-| Community maps | A CS 1.6 server mirror on GitHub, pinned to one commit. Only map, sound, model and texture files are used |
+| Community maps | A CS 1.6 server mirror on GitHub, pinned to one commit, plus a bundle of GameBanana maps fetched by `scripts/fetch-gamebanana-maps` (not pinned). Only map, sound, model and texture files are used |
 | Browser engine | Xash3D FWGS and cs16-client, compiled from the official FWGS repositories (git submodules) |
 
 ## Next

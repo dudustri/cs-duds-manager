@@ -36,6 +36,19 @@ The first build downloads the game server files and the community maps, and comp
 engine. It takes a while. Later builds use the cache. To change a setting, copy `.env.example` to
 `.env` and edit it.
 
+## More maps from GameBanana
+
+`server-config/gamebanana-maps.txt` lists extra maps from GameBanana by id, Chaves and Simpsons maps included.
+They are too big for git, so you fetch them once on each machine before building:
+
+    scripts/fetch-gamebanana-maps
+    docker compose up --build
+
+The script downloads each map, unpacks it in a throwaway container and keeps only map files (maps, textures,
+models, sounds, sprites) in `extra-maps/`. A download that keeps failing is skipped. These downloads are not
+pinned, so fetching again later can bring newer versions. Without the folder the build still works, just with
+fewer maps. To add a map, put its GameBanana id in the list.
+
 ## The browser engine
 
 The game in the browser is Xash3D FWGS with the CS 1.6 client, compiled to WebAssembly from their
@@ -52,7 +65,7 @@ still apply and the tests pass, then merge.
 ## What you get
 
 - 10 modes: classic, deathmatch, free for all, GunGame, zombie, aim, AWP, knife, surf and climb.
-- About 245 maps: the stock maps plus community maps. Special maps only show up in their own mode.
+- About 300 maps: the stock maps plus community maps. Special maps only show up in their own mode.
 - A lobby with quick play, a server list, a players page and a page to create a server.
 - Host controls in the game overlay: kick, bots and map votes. Chat votes with `rtv` and `/votekick`.
 
