@@ -17,19 +17,17 @@ var oob = []byte{0xff, 0xff, 0xff, 0xff}
 // command can only be built by the constructors below: no request string ever reaches RCON.
 type command struct{ line string }
 
-func statusCmd() command             { return command{"status"} }
-func kickCmd(userid int) command     { return command{fmt.Sprintf("kick #%d", userid)} }         // userid > 0 checked at the API
-func cvarCmd(m Mode) command         { return command{m.probeCvar} }                             // reads the mode's probe cvar
-func voteKickCmd(userid int) command { return command{fmt.Sprintf("amx_votekick #%d", userid)} } // userid checked against a fresh status
-func botDifficultyCmd(d int) command { return command{fmt.Sprintf("bot_difficulty %d", d)} }     // 0-3 checked at the API
-func botAddCmd(ct bool) command {
-	if ct {
-		return command{"bot_add_ct"}
-	}
-	return command{"bot_add_t"}
-}
-func botKickCmd() command      { return command{"bot_kick"} }
-func reloadAdminsCmd() command { return command{"amx_reloadadmins"} }
+func statusCmd() command                 { return command{"status"} }
+func kickCmd(userid int) command         { return command{fmt.Sprintf("kick #%d", userid)} }         // userid > 0 checked at the API
+func cvarCmd(m Mode) command             { return command{m.probeCvar} }                             // reads the mode's probe cvar
+func voteKickCmd(userid int) command     { return command{fmt.Sprintf("amx_votekick #%d", userid)} } // userid checked against a fresh status
+func botDifficultyCmd(d int) command     { return command{fmt.Sprintf("bot_difficulty %d", d)} }     // 0-3 checked at the API
+func botKickCmd() command                { return command{"bot_kick"} }
+func botJoinTeamCmd(team string) command { return command{"bot_join_team " + team} }        // "ct", "t" or "any", fixed by AddBots
+func botQuotaCmd(n int) command          { return command{fmt.Sprintf("bot_quota %d", n)} } // count checked at the API
+func botQuotaReadCmd() command           { return command{"bot_quota"} }
+func botKickNameCmd(name string) command { return command{fmt.Sprintf("bot_kick \"%s\"", name)} } // a bot's name from a fresh status, checked
+func reloadAdminsCmd() command           { return command{"amx_reloadadmins"} }
 func voteMapCmd(maps []Map) command {
 	names := make([]string, len(maps))
 	for i, m := range maps {

@@ -90,8 +90,8 @@ const bots = (run: (id: string) => Promise<void>) => async () => {
   }
 };
 const diff = () => Number($<HTMLSelectElement>('bot-diff').value);
-$('bot-ct').onclick = bots((id) => api.addBot(id, 'ct', diff(), auth()));
-$('bot-t').onclick = bots((id) => api.addBot(id, 't', diff(), auth()));
+const count = () => Number($<HTMLSelectElement>('bot-count').value);
+for (const team of ['ct', 't', 'both'] as const) $(`bot-${team}`).onclick = bots((id) => api.addBot(id, team, diff(), count(), auth()));
 $('bot-clear').onclick = bots((id) => api.removeBots(id, auth()));
 $('room-stop').onclick = async () => {
   const id = state.roomId;

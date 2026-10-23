@@ -218,9 +218,13 @@
         <div id="bots" hidden>
           <h3>Bots</h3>
           <div class="botrow">
+            <select id="bot-count" aria-label="How many bots"><option value="1">1 bot</option><option value="2">2 bots</option><option value="5" selected>5 bots</option><option value="10">10 bots</option></select>
             <select id="bot-diff" aria-label="Bot difficulty"><option value="0">Easy</option><option value="1" selected>Normal</option><option value="2">Hard</option><option value="3">Expert</option></select>
-            <button id="bot-ct" type="button" class="ct">Add bot CT</button>
-            <button id="bot-t" type="button" class="tt">Add bot T</button>
+          </div>
+          <div class="botrow">
+            <button id="bot-ct" type="button" class="ct">Add to CT</button>
+            <button id="bot-t" type="button" class="tt">Add to T</button>
+            <button id="bot-both" type="button">Split between teams</button>
             <button id="bot-clear" type="button">Remove all bots</button>
           </div>
           <button id="room-stop" data-testid="room-close-server" type="button" class="danger stop">Close server</button>

@@ -471,6 +471,9 @@ func (s *Server) votes(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// maxBotsPerCall bounds the RCON round trips one request can cost (a 32-slot server fills in two).
+const maxBotsPerCall = 16
+
 func (s *Server) addBot(w http.ResponseWriter, r *http.Request) {
 	if !s.cmdAllowed(w, r) {
 		return
@@ -482,15 +485,20 @@ func (s *Server) addBot(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Team       string
 		Difficulty *int
+		Count      int // optional: 1 when left out
 	}
 	if !decode(w, r, &req) {
 		return
 	}
-	if (req.Team != "ct" && req.Team != "t") || req.Difficulty == nil || *req.Difficulty < 0 || *req.Difficulty > 3 {
-		writeErr(w, 400, "bad_request", `want {"team":"ct"|"t","difficulty":0-3}`)
+	if req.Count == 0 {
+		req.Count = 1
+	}
+	if (req.Team != "ct" && req.Team != "t" && req.Team != "both") || req.Difficulty == nil || *req.Difficulty < 0 ||
+		*req.Difficulty > 3 || req.Count < 1 || req.Count > maxBotsPerCall {
+		writeErr(w, 400, "bad_request", `want {"team":"ct"|"t"|"both","difficulty":0-3,"count":1-16}`)
 		return
 	}
-	if err := rm.AddBot(r.Context(), req.Team == "ct", *req.Difficulty); err != nil {
+	if err := rm.AddBots(r.Context(), req.Team, *req.Difficulty, req.Count); err != nil {
 		writeErr(w, 502, "server_unreachable", "the game server did not answer")
 		return
 	}

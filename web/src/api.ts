@@ -74,8 +74,9 @@ export const voteMap = async (id: string, maps: string[], auth: Auth): Promise<v
   void (await call('POST', `/rooms/${enc(id)}/votes`, { kind: 'map', maps }, auth));
 export const voteKick = async (id: string, userid: number, auth: Auth): Promise<void> =>
   void (await call('POST', `/rooms/${enc(id)}/votes`, { kind: 'kick', userid }, auth));
-export const addBot = async (id: string, team: 'ct' | 't', difficulty: number, auth: Auth): Promise<void> =>
-  void (await call('POST', `/rooms/${enc(id)}/bots`, { team, difficulty }, auth));
+/** Adds `count` bots (1-16) to one team, or to both in turn. */
+export const addBot = async (id: string, team: 'ct' | 't' | 'both', difficulty: number, count: number, auth: Auth): Promise<void> =>
+  void (await call('POST', `/rooms/${enc(id)}/bots`, { team, difficulty, count }, auth));
 export const stopRoom = async (id: string, auth: Auth): Promise<void> => void (await call('POST', `/rooms/${enc(id)}/stop`, undefined, auth));
 export const removeBots = async (id: string, auth: Auth): Promise<void> =>
   void (await call('DELETE', `/rooms/${enc(id)}/bots`, undefined, auth));
