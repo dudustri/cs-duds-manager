@@ -122,8 +122,10 @@ document.addEventListener('pointerlockchange', () => {
   syncOverlay();
 });
 document.addEventListener('fullscreenchange', () => {
-  const kb = (navigator as unknown as { keyboard?: { lock(keys: string[]): Promise<void>; unlock(): void } }).keyboard;
-  if (fullscreen()) void kb?.lock(['Escape']).catch(() => {}); // Chromium only: a short Esc reaches the CS menu
+  const kb = (navigator as unknown as { keyboard?: { lock(keys?: string[]): Promise<void>; unlock(): void } }).keyboard;
+  // Chromium only: every key goes to the game, so crouch (Ctrl) + forward (W) doesn't close the tab and a short Esc
+  // reaches the CS menu; holding Esc still leaves fullscreen
+  if (fullscreen()) void kb?.lock().catch(() => {});
   else {
     kb?.unlock();
     if (document.pointerLockElement) document.exitPointerLock(); // holding Esc left fullscreen: free the mouse too
@@ -131,6 +133,10 @@ document.addEventListener('fullscreenchange', () => {
   renderFullscreenButton();
 });
 $('fullscreen').onclick = toggleFullscreen;
+// Outside fullscreen (and in Firefox) the browser keeps Ctrl+W and friends: ask before a game tab closes
+window.addEventListener('beforeunload', (ev) => {
+  if (state.phase !== 'lobby') ev.preventDefault();
+});
 renderFullscreenButton();
 
 // ---- Engine and connection -------------------------------------------------------------------------------------
