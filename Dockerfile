@@ -109,6 +109,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
       -o -iname '*.bmp' -o -iname '*.res' -o -iname '*.txt' \) -exec cp --parents {} /extra/ \; \
  && cd /extra && find . -depth -name '*[A-Z]*' -execdir sh -c 'n=$(printf %s "$1" | tr A-Z a-z); [ -e "$n" ] || mv "$1" "$n"' _ {} \; \
  && rm -rf /mirror && test -f /extra/maps/cs_rio.bsp
+# the GameBanana bundle (scripts/fetch-gamebanana-maps; empty unless fetched) joins them, never replacing a file
+COPY extra-maps/ /tmp/gamebanana/
+RUN cp -rn /tmp/gamebanana/. /extra/ && rm -rf /tmp/gamebanana /extra/.gitkeep
+# cs_chaves wants Half-Life's potted plant under another name; the original comes with the server files
+COPY --from=hlds /opt/hlds/valve/models/uplant1.mdl "/extra/models/!uplant1.mdl"
+COPY --from=hlds /opt/hlds/valve/models/uplant1t.mdl "/extra/models/!uplant1t.mdl"
 
 FROM hlds AS assets
 COPY --from=gobuild /out/package-assets /usr/local/bin/package-assets

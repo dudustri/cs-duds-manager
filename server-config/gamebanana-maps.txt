@@ -1,0 +1,47 @@
+# GameBanana maps for the extra-maps/ bundle: one mod id per line, then its name (a comment).
+# scripts/fetch-gamebanana-maps downloads them; these are not pinned, so a re-fetch can bring newer versions.
+91817   # Cs_Chaves
+91818   # Cs_Chavo
+85088   # de_springfield
+86688   # fy_simpsons_house
+92175   # cs_mansionsimpsons
+95371   # he_simpsons_nuclear_plant_rmk
+96435   # gg_mini_simpsons
+466280  # de_beishan
+85333   # de_via
+403913  # cs_trailerpark
+463667  # de_lorean
+648025  # de_survivor_new
+340238  # de_season (evening version)
+460319  # cs_foodmarket
+464120  # de_elkantara
+82979   # de_747
+630329  # de_safeandsound
+84238   # DE_Invictus
+592318  # cs_pollos
+463013  # de_azraq
+287590  # de_helispot
+394917  # de_cliffactory
+147170  # fy_oilrig
+287739  # cs_lego_mansion
+91751   # cs_besiege
+82898   # css_dust2_go
+82916   # css_overpass
+85492   # GO: Nuke
+91544   # cs_agency_csgo
+92609   # GO: Office
+82885   # css_cache
+82910   # css_mirage_go
+85491   # GO: Inferno
+607382  # Cs2_anubis
+85499   # go_vertigo_classic
+419311  # de_ancient_csgo
+92140   # cs_krustykrab
+83243   # de_bikinibottom
+86971   # McDonald's Playplace
+92163   # cs_mansion
+84614   # De_Nust2
+317299  # dm_port_akaba_b01
+389885  # dm_heat
+99142   # ka_risingsun
+433129  # zm_chaves_horror
