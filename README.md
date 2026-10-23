@@ -43,7 +43,7 @@ official source. We never use prebuilt engine files.
 
 - `third_party/xash3d-fwgs` and `third_party/cs16-client` are git submodules, each pinned to one commit.
 - `engine/patches/` holds our small fixes for the browser build, one short patch per fix.
-- `engine/net.js` sends the engine's network traffic through our WebRTC connection.
+- `engine/browser.js` connects the engine to the page: network traffic through our WebRTC connection, and fullscreen.
 - The `engine` stage in the `Dockerfile` builds it all with the official Emscripten image.
 
 Dependabot proposes submodule updates once a week. Read the upstream changes, check that the patches

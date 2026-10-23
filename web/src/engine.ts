@@ -28,7 +28,7 @@ interface EmModule {
   ccall(name: string, ret: null, types: string[], args: unknown[]): void;
 }
 
-/** Datagrams from the relay, waiting for the engine's recvfrom (engine/net.js); oldest dropped when full, like UDP. */
+/** Datagrams from the relay, waiting for the engine's recvfrom (engine/browser.js); oldest dropped when full, like UDP. */
 class Inbox {
   #q: Packet[] = [];
   enqueue(p: Packet): void {
@@ -65,7 +65,7 @@ export async function bootEngine(
   const { default: createXash } = (await import(url)) as { default: (m: object) => Promise<EmModule> };
   const em = await createXash({
     canvas,
-    net: { incoming: inbox, sendto: (p: Packet) => transport.sendto(p) }, // used by engine/net.js
+    net: { incoming: inbox, sendto: (p: Packet) => transport.sendto(p) }, // used by engine/browser.js
     locateFile: (path: string) => ENGINE + path,
     // no executable path in a browser to find the game from; C reads the environment once, before main
     preRun: [(m: EmModule) => (m.ENV.XASH3D_BASEDIR = '/rodir')],
@@ -97,8 +97,10 @@ export async function bootEngine(
   fs.chdir('/rodir');
   const x: Engine = { FS: fs, Cmd_ExecuteString: (cmd) => em.ccall('Cmd_ExecuteString', null, ['string'], [cmd]) };
   // main() runs the engine loop; with ASYNCIFY it returns to us at the first frame's sleep and keeps going from there
-  // -vao: draw from GPU buffers only, as WebGL requires; +cl_advertise_engine_in_name 0: no "[Xash3D]" name prefix
-  em.callMain(['-game', 'cstrike', '-ref', 'gles3compat', '-vao', '+cl_advertise_engine_in_name', '0']);
+  // -vao: draw from GPU buffers only, as WebGL requires; -nomapbuffer -noincremental: plain buffer uploads, as WebGL
+  // can't map buffers; +cl_advertise_engine_in_name 0: no "[Xash3D]" name prefix
+  em.callMain(['-game', 'cstrike', '-ref', 'gles3compat', '-vao', '-nomapbuffer', '-noincremental',
+    '+cl_advertise_engine_in_name', '0']);
   await new Promise<void>((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0))); // let it finish one frame
   (window as unknown as { xash: Engine }).xash = x;
   return x;

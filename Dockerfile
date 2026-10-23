@@ -129,7 +129,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends imagemagick && 
  && test -s /out/teams/gign.webp
 
 # The browser engine, compiled from source: Xash3D FWGS and cs16-client from the pinned submodules in third_party/
-# (never prebuilt binaries), plus our build fixes in engine/patches/ and the WebRTC network glue engine/net.js.
+# (never prebuilt binaries), plus our build fixes in engine/patches/ and the browser glue engine/browser.js.
 # Only what the page loads is kept: the engine, its file system and WebGL 2 renderer, the CS client and menu, and
 # the menu art. No server code, bots, training maps or touch controls.
 FROM emscripten/emsdk:6.0.12@sha256:77638e6c215a65f25a704c0c831d5c2463a8c0468a58c6cb82489dbe621dfa05 AS engine

@@ -1,8 +1,14 @@
-// Emscripten JS library linked into the engine (--js-library). The engine's UDP traffic goes to Module.net, which the
-// page wires to the WebRTC relay (web/src/engine.ts), instead of Emscripten's WebSocket socket emulation.
-// Send, receive and socket options are replaced; socket, bind and addresses stay Emscripten's own.
+// Emscripten JS library linked into the engine (--js-library): how the engine meets the page.
+// Network: the engine's UDP traffic goes to Module.net, which the page wires to the WebRTC relay (web/src/engine.ts),
+// instead of Emscripten's WebSocket socket emulation. Send, receive and socket options are replaced; socket, bind and
+// addresses stay Emscripten's own.
+// Fullscreen: the page owns it (a click goes fullscreen, F11 and the overlay toggle it). SDL would otherwise leave
+// fullscreen when the engine sets its windowed video mode.
 
 addToLibrary({
+  emscripten_exit_fullscreen: () => 0,
+  emscripten_request_fullscreen_strategy: (target, deferUntilInEventHandler, strategy) => 0,
+
   // options like SO_REUSEADDR mean nothing for a WebRTC channel, but the engine drops a socket that refuses them
   __syscall_setsockopt: (fd, level, optname, optval, optlen) => 0,
 

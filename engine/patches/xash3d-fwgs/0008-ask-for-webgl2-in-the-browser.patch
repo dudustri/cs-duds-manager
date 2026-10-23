@@ -1,0 +1,15 @@
+diff --git a/ref/gl/gl_opengl.c b/ref/gl/gl_opengl.c
+index f05a3ddf..051a7959 100644
+--- a/ref/gl/gl_opengl.c
++++ b/ref/gl/gl_opengl.c
+@@ -1456,6 +1456,10 @@ void GL_SetupAttributes( int safegl )
+ #if XASH_NANOGL
+ 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 1 );
+ 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 1 );
++#elif XASH_GLES3COMPAT && XASH_EMSCRIPTEN
++	// drivers hand out an ES 3 context for an ES 2 request; browsers map the version exactly (2 is WebGL 1)
++	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 3 );
++	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 0 );
+ #else // !XASH_NANOGL
+ 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MAJOR_VERSION, 2 );
+ 	gEngfuncs.GL_SetAttribute( REF_GL_CONTEXT_MINOR_VERSION, 0 );
