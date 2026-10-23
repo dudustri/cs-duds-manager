@@ -82,7 +82,7 @@ function mapThumb(map: string, cls: string): HTMLElement {
   return box;
 }
 
-/** Whether the server lists a player in that room under the name typed in the name box. */
+/** Whether the server lists a player in that room under the name we hold. */
 const nameTakenIn = (room: string | undefined) => {
   const me = myName().toLowerCase();
   return people.some((p) => p.room === room && p.name.toLowerCase() === me);
