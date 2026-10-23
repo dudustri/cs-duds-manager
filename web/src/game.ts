@@ -179,6 +179,7 @@ async function fetchMapAndRejoin(map: string): Promise<void> {
   const x = engine;
   if (!x || !state.roomId) return;
   const my = setPhase('loading');
+  newMapTeam();
   $('load-map').textContent = map;
   $('load-sub').textContent = 'Map change';
   setStage('download', 'Downloading map');
@@ -196,15 +197,35 @@ async function fetchMapAndRejoin(map: string): Promise<void> {
 // The relay keeps the channel open when the server drops us, so the engine's own log tells us. Only svc_disconnect
 // means *we* were dropped; "Server disconnected, reconnecting" (changelevel) and "<name> was kicked" do not.
 const DROPPED = /Server issued disconnect\. Reason: (.*)/;
+// the engine reloads the game folders for every new map (it also does at boot, while we are still loading)
+const CHANGING = /FS_AddGameHierarchy\( valve \)|Server (changing|disconnected), reconnecting/;
 const IN_GAME = 'cs-duds: in game'; // echoed by our server plugin (cs_duds_votes.sma) once the map has loaded
 function onEngineLog(line: string): void {
   if (line.includes(IN_GAME) && state.phase === 'loading' && state.roomId) {
     return void setPhase('playing');
   }
+  if (CHANGING.test(line) && state.phase === 'playing') return void showMapChange();
   const missing = MISSING_MAP.exec(line);
-  if (missing && state.phase === 'playing') return void fetchMapAndRejoin(missing[1].toLowerCase());
+  if (missing && state.roomId && state.phase !== 'lobby') return void fetchMapAndRejoin(missing[1].toLowerCase());
   const m = DROPPED.exec(line);
-  if (m && state.phase === 'playing') leave(`Disconnected: ${m[1].trim().slice(0, 100)}`, true);
+  if (m && state.roomId && state.phase !== 'lobby') leave(`Disconnected: ${m[1].trim().slice(0, 100)}`, true);
+}
+
+/** CS asks for a team on every new map: free the mouse so the team picker can show once we are in. */
+function newMapTeam(): void {
+  teamChosen = false;
+  wantLock = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+
+/** A level change: our loading screen instead of the engine's console until the next map is in, then a team again. */
+function showMapChange(): void {
+  const my = setPhase('loading');
+  $('load-map').textContent = 'Next map';
+  $('load-sub').textContent = 'Map change';
+  setStage('join', 'Loading the next map');
+  newMapTeam();
+  setTimeout(() => isCurrent(my) && state.phase === 'loading' && leave('Could not join the next map.', true), 90_000);
 }
 
 const hostToken = () => (state.roomId ? api.hostTokens.get(state.roomId) : undefined);
