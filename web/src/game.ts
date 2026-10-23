@@ -1,9 +1,8 @@
 // The game view: one phase (lobby -> loading -> playing -> lobby) that decides what is on screen, plus fullscreen,
 // pointer lock, the engine and the room connection.
-import type { Xash3D } from 'xash3d-fwgs';
 import * as api from './api.ts';
 import { loadBundles } from './assets.ts';
-import { bootEngine, mountMaps, setName } from './engine.ts';
+import { bootEngine, mountMaps, setName, type Engine } from './engine.ts';
 import { myName, renewName } from './name.ts';
 import { CONNECT_CMD, RelayTransport } from './transport.ts';
 import { $, errorText, setNote } from './ui.ts';
@@ -26,8 +25,8 @@ const loading = $('loading');
 const overlay = $('overlay');
 
 const transport = new RelayTransport();
-let engine: Xash3D | undefined;
-let booting: Promise<Xash3D> | undefined;
+let engine: Engine | undefined;
+let booting: Promise<Engine> | undefined;
 let epoch = 0; // bumped on every move to loading or lobby, so a late async step can tell it was cancelled
 let wantLock = false; // the player clicked the canvas; the engine's own pointer-lock requests don't count
 
@@ -145,7 +144,7 @@ const showDownload = (d: number, t: number, step?: 'checking' | 'saving') =>
   );
 
 // Engine boot, once per page: the base bundle and the first map, then the wasm engine.
-function boot(firstMap: string): Promise<Xash3D> {
+function boot(firstMap: string): Promise<Engine> {
   booting ??= (async () => {
     // The engine takes its resolution from the canvas attributes once, at boot (it can't change it later), and
     // the game runs fullscreen: so boot at the screen's size; CSS scales it down in a smaller window.
@@ -164,7 +163,7 @@ function boot(firstMap: string): Promise<Xash3D> {
 
 // Maps are fetched one at a time: on join, and when a map change finds the next one missing (see onEngineLog).
 const mapsMounted = new Map<string, Promise<void>>();
-function ensureMap(x: Xash3D, map: string, onProgress?: (d: number, t: number) => void): Promise<void> {
+function ensureMap(x: Engine, map: string, onProgress?: (d: number, t: number) => void): Promise<void> {
   let p = mapsMounted.get(map);
   if (!p) {
     p = loadBundles([map], false, onProgress ?? (() => {})).then((b) => mountMaps(x, b));
