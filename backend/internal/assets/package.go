@@ -294,9 +294,16 @@ func checkMap(t map[string]string, m string, wadCache map[string]map[string]stru
 
 	dedup := map[string]bool{}
 	ref := func(p, why string) {
-		p = strings.ToLower(strings.ReplaceAll(p, `\`, "/"))
+		// maps may write "/models/x.mdl" or "models/a//b.mdl"; the engine reads both as the plain path
+		p = path.Clean(strings.TrimLeft(strings.ToLower(strings.ReplaceAll(p, `\`, "/")), "/"))
 		if _, ok := t[p]; ok {
 			deps = append(deps, p)
+			// a model may keep its textures in a companion <name>t.mdl, which the engine loads when it is there
+			if tex := strings.TrimSuffix(p, ".mdl") + "t.mdl"; strings.HasSuffix(p, ".mdl") {
+				if _, ok := t[tex]; ok {
+					deps = append(deps, tex)
+				}
+			}
 		} else if !dedup[p] {
 			dedup[p] = true
 			out = append(out, Missing{m, p, why})

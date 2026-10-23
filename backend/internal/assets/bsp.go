@@ -55,8 +55,9 @@ func parseBSP(b []byte) (ents []map[string]string, external []string, err error)
 			return nil, nil, errors.New("bsp miptex out of range")
 		}
 		m := tl[o:]
-		if le.Uint32(m[24:]) == 0 && le.Uint32(m[28:]) == 0 && le.Uint32(m[32:]) == 0 && le.Uint32(m[36:]) == 0 {
-			external = append(external, cstr(m[:16]))
+		// an unnamed entry is no texture at all, nothing to look up
+		if name := cstr(m[:16]); name != "" && le.Uint32(m[24:]) == 0 && le.Uint32(m[28:]) == 0 && le.Uint32(m[32:]) == 0 && le.Uint32(m[36:]) == 0 {
+			external = append(external, name)
 		}
 	}
 	return ents, external, nil
