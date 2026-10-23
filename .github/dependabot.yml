@@ -1,0 +1,7 @@
+# Proposes updates to the engine sources (git submodules in third_party/) once a week, as pull requests to review.
+version: 2
+updates:
+  - package-ecosystem: gitsubmodule
+    directory: /
+    schedule:
+      interval: weekly
