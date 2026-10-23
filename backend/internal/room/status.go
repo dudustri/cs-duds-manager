@@ -3,6 +3,7 @@ package room
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"strconv"
 	"strings"
 )
@@ -13,12 +14,13 @@ type Status struct {
 }
 
 type Player struct {
-	UserID   int    `json:"userid"`
-	Name     string `json:"name"`
-	UniqueID string `json:"steamid"` // "BOT" for bots
-	Frags    int    `json:"frags"`
-	Ping     int    `json:"ping"`
-	Bot      bool   `json:"bot"`
+	UserID   int        `json:"userid"`
+	Name     string     `json:"name"`
+	UniqueID string     `json:"steamid"` // "BOT" for bots
+	Frags    int        `json:"frags"`
+	Ping     int        `json:"ping"`
+	Bot      bool       `json:"bot"`
+	Addr     netip.Addr `json:"-"` // where the player plays from: each relay session has its own; never published
 }
 
 func (s Status) Humans() int {
@@ -77,5 +79,11 @@ func parseRow(line string) (p Player, ok bool, err error) {
 			return p, false, fmt.Errorf("status: malformed row %q", line)
 		}
 	}
-	return Player{UserID: nums[0], Name: line[q1+1 : q2], UniqueID: f[1], Frags: nums[1], Ping: nums[2], Bot: f[1] == "BOT"}, true, nil
+	p = Player{UserID: nums[0], Name: line[q1+1 : q2], UniqueID: f[1], Frags: nums[1], Ping: nums[2], Bot: f[1] == "BOT"}
+	if len(f) > 6 { // bots have no address
+		if ap, err := netip.ParseAddrPort(f[6]); err == nil {
+			p.Addr = ap.Addr()
+		}
+	}
+	return p, true, nil
 }

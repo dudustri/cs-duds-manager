@@ -137,6 +137,12 @@ $('fullscreen').onclick = toggleFullscreen;
 window.addEventListener('beforeunload', (ev) => {
   if (state.phase !== 'lobby') ev.preventDefault();
 });
+// The tab is going: say goodbye to the server and close the channel now, so others see us leave at once
+window.addEventListener('pagehide', () => {
+  if (!state.roomId) return;
+  engine?.Cmd_ExecuteString('disconnect');
+  transport.close();
+});
 renderFullscreenButton();
 
 // ---- Engine and connection -------------------------------------------------------------------------------------

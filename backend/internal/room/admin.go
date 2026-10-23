@@ -113,13 +113,30 @@ func (s *Session) Attach(src netip.Addr) (end func()) {
 	return func() {
 		once.Do(func() {
 			r.sess.mu.Lock()
-			defer r.sess.mu.Unlock()
 			delete(r.sess.tokens, s.Token)
 			if _, ok := r.sess.admins[src]; ok {
 				delete(r.sess.admins, src)
 				r.adminsChanged()
 			}
+			r.sess.mu.Unlock()
+			r.dropAt(src) // before the relay frees src for another player
 		})
+	}
+}
+
+// dropAt kicks the human playing from src. A closed tab or a lost connection says nothing to the game server, which
+// would otherwise keep the player in the game until its own timeout (about a minute).
+func (r *Room) dropAt(src netip.Addr) {
+	ctx, cancel := context.WithTimeout(r.ctx, 3*time.Second)
+	defer cancel()
+	ps, err := r.Players(ctx)
+	if err != nil {
+		return // a stopping room: nothing left to drop
+	}
+	for _, p := range ps {
+		if !p.Bot && p.Addr == src {
+			_ = r.Kick(ctx, p.UserID)
+		}
 	}
 }
 
