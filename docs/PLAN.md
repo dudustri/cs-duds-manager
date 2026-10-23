@@ -18,8 +18,16 @@ from an anonymous SteamCMD download during the Docker build.
 
 ### The browser runs the real engine
 
-The client is Xash3D FWGS compiled to WebAssembly, with the CS 1.6 client on top. Both are vendored
-in `web/vendor/` because their upstream packages were removed or deprecated.
+The client is Xash3D FWGS compiled to WebAssembly, with the CS 1.6 client on top. We compile both
+ourselves from the official FWGS repositories, which are git submodules in `third_party/` pinned to one
+commit each. No prebuilt engine files are used: FWGS warns that third-party builds often carry malware,
+and they publish no browser build of their own.
+
+- The Docker build compiles them with the official Emscripten image, pinned by digest.
+- Upstream's browser build is old, so it needs small fixes. Each fix is a short patch in
+  `engine/patches/`, so every change to upstream code can be read and reviewed.
+- `engine/net.js` sends the engine's network traffic to our WebRTC transport.
+- Only what the page needs is built. No server code, bots, training maps or touch controls.
 
 ### WebRTC carries the game traffic
 
@@ -60,7 +68,8 @@ file a map needs is there.
 
 ## Where things come from
 
-Every download is pinned by version and sha256 in `backend/docker/pins.txt`.
+Every download is pinned by version and sha256 in `backend/docker/pins.txt`. The engine sources are
+pinned by git commit in `third_party/`, and every base image by digest.
 
 | Part | Source |
 |---|---|
@@ -70,7 +79,7 @@ Every download is pinned by version and sha256 in `backend/docker/pins.txt`.
 | GunGame | Plugin source, compiled during the build |
 | Our plugins | Chat votes, kill announcer, climb timer and zombie, in `server-config/amxx/` |
 | Community maps | A CS 1.6 server mirror on GitHub, pinned to one commit. Only map, sound, model and texture files are used |
-| Browser engine | Xash3D FWGS 1.2.2 and cs16-client 0.1.2, vendored |
+| Browser engine | Xash3D FWGS and cs16-client, compiled from the official FWGS repositories (git submodules) |
 
 ## Next
 
