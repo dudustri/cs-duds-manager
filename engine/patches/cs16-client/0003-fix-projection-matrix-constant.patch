@@ -1,0 +1,13 @@
+diff --git a/cl_dll/particleman/CFrustum.cpp b/cl_dll/particleman/CFrustum.cpp
+index fcf11f6..2b309a1 100644
+--- a/cl_dll/particleman/CFrustum.cpp
++++ b/cl_dll/particleman/CFrustum.cpp
+@@ -17,7 +17,7 @@
+ #include "windows_lean.h"
+ 
+ #ifndef GL_PROJECTION_MATRIX
+-#define GL_PROJECTION_MATRIX 0x0BA1
++#define GL_PROJECTION_MATRIX 0x0BA7 // was 0x0BA1 (GL_NORMALIZE), which broke particle culling
+ #endif
+ #ifndef GL_MODELVIEW_MATRIX
+ #define GL_MODELVIEW_MATRIX 0x0BA6
