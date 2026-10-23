@@ -1,0 +1,27 @@
+diff --git a/wscript b/wscript
+index de4e031d..40a9596e 100644
+--- a/wscript
++++ b/wscript
+@@ -129,7 +129,7 @@ def register_define(self, conf):
+ 	Subproject('3rdparty/vorbis',       lambda x: x.env.CLIENT and (not x.env.HAVE_SYSTEM_VORBIS or not x.env.HAVE_SYSTEM_VORBISFILE)),
+ 	Subproject('3rdparty/opusfile',     lambda x: x.env.CLIENT and not x.env.HAVE_SYSTEM_OPUSFILE),
+ 	Subproject('3rdparty/maintui',      lambda x: x.env.CLIENT and x.env.TUI),
+-	Subproject('3rdparty/mainui',       lambda x: x.env.CLIENT and x.env.DEST_OS != 'android'),
++	Subproject('3rdparty/mainui',       lambda x: x.env.CLIENT and x.env.DEST_OS not in ['android', 'emscripten']), # the game brings its own menu
+ 
+ 	# engine is obligated to provide VGUI interface in 32-bit builds on Windows/Linux/Mac as shared library
+ 	# on platforms supported only by Xash3D FWGS, freevgui can be linked statically into client library
+@@ -394,6 +394,13 @@ def configure(conf):
+ 		conf.env.append_unique('CXXFLAGS_cxxshlib', ['-fPIC', '-fno-use-cxa-atexit'])
+ 		conf.env.append_unique('LINKFLAGS_cshlib', ['-nostdlib', '-Wl,--unresolved-symbols=ignore-all'])
+ 		conf.env.append_unique('LINKFLAGS_cxxshlib', ['-nostdlib', '-Wl,--unresolved-symbols=ignore-all'])
++	# browser: shared libraries are side modules the engine (the main module) loads at runtime, and dynamic
++	# linking needs every object position-independent, the engine's and its static libraries' too
++	elif conf.env.DEST_OS == 'emscripten':
++		cflags += ['-fPIC']
++		cxxflags += ['-fPIC']
++		conf.env.append_unique('LINKFLAGS_cshlib', ['-sSIDE_MODULE=1'])
++		conf.env.append_unique('LINKFLAGS_cxxshlib', ['-sSIDE_MODULE=1'])
+ 	# check if we need to use irix linkflags
+ 	elif conf.env.DEST_OS == 'irix' and conf.env.COMPILER_CC == 'gcc':
+ 		linkflags.remove('-Wl,--no-undefined')

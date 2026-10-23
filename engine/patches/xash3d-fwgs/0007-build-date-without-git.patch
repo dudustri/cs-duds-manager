@@ -1,0 +1,14 @@
+diff --git a/public/wscript b/public/wscript
+index 4f47247e..3b80d31d 100644
+--- a/public/wscript
++++ b/public/wscript
+@@ -67,7 +67,8 @@ def get_git_commit_date(conf):
+ 
+ 	if not node:
+ 		Logs.debug('can\'t find .git in conf.srcnode')
+-		return None
++		# builds from a source tree without git history (like a container) pass the date in instead
++		return os.environ.get('XASH_BUILD_DATE')
+ 
+ 	return gitversion.run_git(conf, ['log', '-1', '--format=%ci'])
+ 

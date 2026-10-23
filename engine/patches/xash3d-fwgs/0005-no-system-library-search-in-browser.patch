@@ -1,0 +1,17 @@
+diff --git a/engine/platform/posix/lib_posix.c b/engine/platform/posix/lib_posix.c
+index 3698d2e4..35377c97 100644
+--- a/engine/platform/posix/lib_posix.c
++++ b/engine/platform/posix/lib_posix.c
+@@ -296,10 +296,12 @@ void *COM_LoadLibrary( const char *dllname, int build_ordinals_table, qboolean d
+ 
+ 	if( !hInst )
+ 	{
++#if !XASH_EMSCRIPTEN // a browser has no system libraries: Emscripten would fetch the name from the network instead
+ 		// try to find by linker(LD_LIBRARY_PATH, DYLD_LIBRARY_PATH, LD_32_LIBRARY_PATH and so on...)
+ 		void *pHandle = dlopen( dllname, RTLD_NOW );
+ 		if( pHandle )
+ 			return pHandle;
++#endif
+ 
+ 		Q_snprintf( buf, sizeof( buf ), "Failed to find library %s", dllname );
+ 		COM_PushLibraryError( buf );

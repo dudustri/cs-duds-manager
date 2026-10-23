@@ -1,0 +1,36 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index f1b7a31..bde02fc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -34,10 +34,17 @@ if(VITA)
+ 	add_compile_options(-fno-use-cxa-atexit)
+ endif()
+ 
+-if(NOT WIN32 AND NOT APPLE AND NOT VITA)
++if(NOT WIN32 AND NOT APPLE AND NOT VITA AND NOT EMSCRIPTEN)
+ 	add_link_options(-Wl,--no-undefined)
+ endif()
+ 
++# browser: the client and menu are side modules the engine loads at runtime
++if(EMSCRIPTEN)
++	set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS TRUE)
++	add_compile_options(-fPIC)
++	add_link_options(-sSIDE_MODULE=1)
++endif()
++
+ include(CheckSymbolExists)
+ check_symbol_exists(strlcpy string.h HAVE_STRLCPY)
+ check_symbol_exists(strlcat string.h HAVE_STRLCAT)
+diff --git a/common/interface.h b/common/interface.h
+index 05e8b61..67b6510 100644
+--- a/common/interface.h
++++ b/common/interface.h
+@@ -23,7 +23,7 @@
+ 
+ #include "build.h"
+ 
+-#if XASH_LINUX == 1
++#if XASH_LINUX == 1 || XASH_EMSCRIPTEN == 1
+ #include <dlfcn.h> // dlopen,dlclose, et al
+ #include <unistd.h>
+ #endif
