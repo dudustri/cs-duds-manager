@@ -1,0 +1,14 @@
+diff --git a/engine/common/host.c b/engine/common/host.c
+index 81ac9c38..53344123 100644
+--- a/engine/common/host.c
++++ b/engine/common/host.c
+@@ -715,7 +715,9 @@ void GAME_EXPORT Host_Error( const char *error, ... )
+ 		UI_SetActiveMenu( false );
+ 		Key_SetKeyDest( key_console );
+ 	}
++#if !XASH_EMSCRIPTEN // the page reads the line above from the log and recovers (a missing map) or shows it, no alert()
+ 	else Platform_MessageBox( "Host Error", hosterror1, true );
++#endif
+ 
+ 	// host is shutting down. don't invoke infinite loop
+ 	if( host.status == HOST_SHUTDOWN || host.status == HOST_ERR_FATAL )

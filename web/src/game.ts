@@ -185,6 +185,7 @@ function ensureMap(x: Engine, map: string, onProgress?: (d: number, t: number) =
   return p;
 }
 const MISSING_MAP = /Could not load model maps\/([a-z0-9_.-]+)\.bsp/i;
+const HOST_ERROR = /Host_Error: (.*)/;
 
 /** A map change to a map we don't have: fetch it behind the loading screen, then reconnect. */
 async function fetchMapAndRejoin(map: string): Promise<void> {
@@ -219,6 +220,8 @@ function onEngineLog(line: string): void {
   if (CHANGING.test(line) && state.phase === 'playing') return void showMapChange();
   const missing = MISSING_MAP.exec(line);
   if (missing && state.roomId && state.phase !== 'lobby') return void fetchMapAndRejoin(missing[1].toLowerCase());
+  const failed = HOST_ERROR.exec(line); // any other engine error has already dropped the connection
+  if (failed && state.roomId && state.phase !== 'lobby') return void leave(`Game error: ${failed[1].trim().slice(0, 100)}`, true);
   const m = DROPPED.exec(line);
   if (m && state.roomId && state.phase !== 'lobby') leave(`Disconnected: ${m[1].trim().slice(0, 100)}`, true);
 }
