@@ -9,7 +9,7 @@ flowchart LR
     subgraph Browser["Browser tab"]
         UI["Page UI<br/>room list · create room · host panel"]
         Assets["assets.ts<br/>manifest + CacheStorage<br/>sha256-verified pk3s"]
-        Engine["Xash3D-FWGS WASM<br/>+ cs16-client (vendored 1.2.2)<br/>pk3s mounted in MEMFS"]
+        Engine["Xash3D FWGS WASM<br/>+ cs16-client (built from source)<br/>pk3s mounted in MEMFS"]
         Transport["transport.ts<br/>RTCPeerConnection + Net adapter<br/>engine sees 192.0.2.1:27015"]
         UI --> Assets --> Engine
         Engine <--> Transport

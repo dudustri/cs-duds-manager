@@ -23,13 +23,31 @@ flowchart LR
 
 ## Run it
 
-You need Linux, Docker with Compose, about 6 GB of disk and Chrome or Firefox.
+You need Linux, Docker with Compose, about 10 GB of disk and Chrome or Firefox.
 
+    git clone --recursive https://github.com/dudustri/cs-duds-manager
+    cd cs-duds-manager
     docker compose up --build
     xdg-open http://localhost
 
-The first build downloads the game server files and the community maps. It takes a while.
-Later builds use the cache. To change a setting, copy `.env.example` to `.env` and edit it.
+Already cloned without `--recursive`? Run `git submodule update --init --recursive` first.
+
+The first build downloads the game server files and the community maps, and compiles the browser
+engine. It takes a while. Later builds use the cache. To change a setting, copy `.env.example` to
+`.env` and edit it.
+
+## The browser engine
+
+The game in the browser is Xash3D FWGS with the CS 1.6 client, compiled to WebAssembly from their
+official source. We never use prebuilt engine files.
+
+- `third_party/xash3d-fwgs` and `third_party/cs16-client` are git submodules, each pinned to one commit.
+- `engine/patches/` holds our small fixes for the browser build, one short patch per fix.
+- `engine/net.js` sends the engine's network traffic through our WebRTC connection.
+- The `engine` stage in the `Dockerfile` builds it all with the official Emscripten image.
+
+Dependabot proposes submodule updates once a week. Read the upstream changes, check that the patches
+still apply and the tests pass, then merge.
 
 ## What you get
 
