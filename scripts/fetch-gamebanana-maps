@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+"""Builds the extra-maps/ bundle from server-config/gamebanana-maps.txt (GameBanana mod ids).
+
+For each id it asks GameBanana's API for the map's newest download (skipping source files, prefabs and alternate
+light or seasonal versions), unpacks the archives inside a throwaway Debian container (nothing from them runs here),
+and keeps only map data files (.bsp .wad .wav .mdl .spr .tga .bmp .res .txt) in a cstrike layout:
+extra-maps/maps/x.bsp, extra-maps/sound/..., extra-maps/x.wad. Not pinned: a re-run can bring newer versions.
+The Dockerfile adds the bundle to the community maps; maps missing a file are left out by the asset check.
+
+usage: scripts/fetch-gamebanana-maps            (downloads are cached in .cache/gamebanana/)
+"""
+import json, os, re, shutil, subprocess, sys, time, urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+LIST = ROOT / "server-config/gamebanana-maps.txt"
+OUT = ROOT / "extra-maps"
+WORK = ROOT / ".cache/gamebanana"
+DEBIAN = "debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587"  # as in Dockerfile
+KEEP = {".bsp", ".wad", ".wav", ".mdl", ".spr", ".tga", ".bmp", ".res", ".txt"}
+DIRS = {"maps", "sound", "models", "sprites", "gfx", "overviews"}  # cstrike folders a map may bring
+SKIP = re.compile(r"source|developer|prefab|light|xmas|winter|beta", re.I)
+
+
+def api(path):
+    req = urllib.request.Request("https://gamebanana.com/apiv11/" + path, headers={"User-Agent": "cs-duds map bundle"})
+    return json.load(urllib.request.urlopen(req, timeout=30))
+
+
+def download(mod):
+    """The map's archive in the cache, or None when GameBanana won't give it to us after a few tries."""
+    for attempt in range(3):
+        try:
+            files = api(f"Mod/{mod}?_csvProperties=_aFiles")["_aFiles"]
+            f = max([f for f in files if not SKIP.search(f["_sFile"])] or files, key=lambda f: f.get("_tsDateAdded", 0))
+            if f.get("_sAvResult") not in (None, "clean"):
+                print(f"skip {mod}: GameBanana's virus scan says {f['_sAvResult']!r} for {f['_sFile']}")
+                return None
+            d = WORK / "dl" / str(mod)
+            target = d / f["_sFile"]
+            if target.exists():
+                return target
+            shutil.rmtree(d, ignore_errors=True)
+            d.mkdir(parents=True)
+            req = urllib.request.Request(f["_sDownloadUrl"], headers={"User-Agent": "cs-duds map bundle"})
+            with urllib.request.urlopen(req, timeout=120) as r, open(target.with_suffix(".part"), "wb") as w:
+                shutil.copyfileobj(r, w)
+            target.with_suffix(".part").rename(target)  # a cut-off download never looks finished
+            return target
+        except Exception as e:
+            print(f"{mod}: download try {attempt + 1} failed: {e}")
+            time.sleep(3)
+    print(f"skip {mod}: no download after 3 tries")
+    return None
+
+
+def extract(archives):
+    x = WORK / "x"
+    x.mkdir(parents=True, exist_ok=True)  # emptied inside the container: files it unpacked belong to its root
+    # each archive on its own: a broken one is reported and skipped, the rest still unpack
+    # unpackers from Debian's archive, tried in turn: unar, then 7-Zip (new .7z), then unrar (RAR5, Debian non-free)
+    setup = ("sed -i 's/^Components: main$/Components: main non-free/' /etc/apt/sources.list.d/debian.sources; "
+             "apt-get -qq update >/dev/null && apt-get -qq install -y --no-install-recommends unar 7zip unrar >/dev/null 2>&1; ")
+    def unpack(a):
+        out, src = f"/work/x/{a.parent.name}", f"'/work/dl/{a.parent.name}/{a.name}'"
+        return (f"unar -q -f -o {out} {src} >/dev/null 2>&1 || 7zz x -y -o{out} {src} >/dev/null 2>&1 || "
+                f"(mkdir -p {out} && unrar x -o+ -inul {src} {out}/) || echo 'skip {a.parent.name}: could not unpack {a.name}'")
+    # some uploads pack the map's own archives inside theirs: unpack those once more, next to where they were
+    nested = ("; find /work/x -type f \\( -iname '*.rar' -o -iname '*.zip' -o -iname '*.7z' \\) | while read -r a; do "
+              "o=\"${a%.*}\"; unar -q -f -o \"$o\" \"$a\" >/dev/null 2>&1 || 7zz x -y -o\"$o\" \"$a\" >/dev/null 2>&1 || "
+              "(mkdir -p \"$o\" && unrar x -o+ -inul \"$a\" \"$o/\") || echo \"skip nested $a\"; done")
+    script = "rm -rf /work/x/*; " + setup + "; ".join(unpack(a) for a in archives) + nested + f"; chown -R {os.getuid()}:{os.getgid()} /work/x"
+    subprocess.run(["docker", "run", "--rm", "-v", f"{WORK}:/work", DEBIAN, "sh", "-c", script], check=True)
+    return x
+
+
+def place(src, mod_dir):
+    """Where src goes in the bundle: below a cstrike folder name if it has one, else by file type."""
+    parts = [p.lower() for p in src.relative_to(mod_dir).parts]
+    for i, p in enumerate(parts[:-1]):
+        if p in DIRS:
+            return Path(*parts[i:])
+    name = parts[-1]
+    if name.endswith(".wad"):
+        return Path(name)
+    if name.endswith((".bsp", ".res", ".txt")):
+        return Path("maps", name)
+    return None  # a loose sound or model with no folder: we can't tell where the map expects it
+
+
+def main():
+    mods = [int(l.split("#")[0]) for l in LIST.read_text().splitlines() if l.split("#")[0].strip()]
+    archives = [a for a in (download(m) for m in mods) if a]
+    x = extract(archives)
+    shutil.rmtree(OUT, ignore_errors=True)
+    OUT.mkdir()
+    (OUT / ".gitkeep").touch()  # git keeps the folder, so the Dockerfile can always copy it
+    kept = maps = 0
+    for mod_dir in sorted(p for p in x.iterdir() if p.is_dir()):
+        for src in sorted(p for p in mod_dir.rglob("*") if p.is_file() and p.suffix.lower() in KEEP):
+            rel = place(src, mod_dir)
+            if rel is None or (rel.parts[0] == "maps" and rel.suffix == ".txt" and "readme" in rel.name):
+                continue
+            dst = OUT / rel
+            if dst.exists():
+                continue  # first one wins
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(src, dst)
+            kept += 1
+            maps += rel.suffix == ".bsp" and rel.parts[0] == "maps"
+    print(f"extra-maps/: {maps} maps, {kept} files from {len(mods)} GameBanana entries")
+
+
+if __name__ == "__main__":
+    main()

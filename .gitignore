@@ -4,3 +4,7 @@ web/dist/
 test-results/
 playwright-report/
 .claude-pipeline/
+# GameBanana map bundle (scripts/fetch-gamebanana-maps) and its download cache
+extra-maps/*
+!extra-maps/.gitkeep
+.cache/
