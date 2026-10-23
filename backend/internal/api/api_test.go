@@ -614,7 +614,9 @@ func TestBots(t *testing.T) {
 			got = append(got, l)
 		}
 	}
-	want := []string{"bot_difficulty 2", "bot_add_ct", "bot_difficulty 0", "bot_add_t", "bot_kick"}
+	// each add reads the bot target and raises it (the fake server has no bots, so it reads as 0)
+	want := []string{"bot_quota", "bot_difficulty 2", "bot_join_team ct", "bot_quota 1",
+		"bot_quota", "bot_difficulty 0", "bot_join_team t", "bot_quota 1", "bot_kick"}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("bot rcon lines %q, want %q", got, want)
 	}

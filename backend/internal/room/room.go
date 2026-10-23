@@ -419,20 +419,46 @@ func (r *Room) Players(ctx context.Context) ([]Player, error) {
 	return st.Players, nil
 }
 
-// Kick an absent userid is success, like the server's own `kick`.
+// Kick an absent userid is success, like the server's own `kick`. A bot goes by bot_kick: a plain kick leaves the
+// bot target as it was, and the server adds the bot straight back.
 func (r *Room) Kick(ctx context.Context, userid int) error {
+	if ps, err := r.Players(ctx); err == nil {
+		for _, p := range ps {
+			if p.UserID == userid && p.Bot && !strings.ContainsAny(p.Name, `";`) {
+				_, err := r.rcon.exec(ctx, botKickNameCmd(p.Name))
+				return err
+			}
+		}
+	}
 	_, err := r.rcon.exec(ctx, kickCmd(userid))
 	return err
 }
 
-// AddBot sets zBot's difficulty (0-3, checked at the API) and adds one bot; the replies carry nothing.
-func (r *Room) AddBot(ctx context.Context, ct bool, difficulty int) error {
-	if _, err := r.rcon.exec(ctx, botDifficultyCmd(difficulty)); err != nil {
+// AddBots raises zBot's bot target by count (difficulty 0-3 and count checked at the API) for team "ct", "t", or
+// "both" (the bots balance the teams). The server adds them itself, and it ignores bot_add while it builds a map's
+// navigation (seconds, on a map's first bots), which a quota waits out. A full server just adds no more.
+func (r *Room) AddBots(ctx context.Context, team string, difficulty, count int) error {
+	join := map[string]string{"ct": "ct", "t": "t", "both": "any"}[team]
+	if join == "" {
+		return fmt.Errorf("bots: team %q", team)
+	}
+	out, err := r.rcon.exec(ctx, botQuotaReadCmd())
+	if err != nil {
 		return err
 	}
-	_, err := r.rcon.exec(ctx, botAddCmd(ct))
-	return err
+	quota := 0
+	if m := quotaRe.FindStringSubmatch(out); m != nil {
+		quota, _ = strconv.Atoi(m[1])
+	}
+	for _, c := range []command{botDifficultyCmd(difficulty), botJoinTeamCmd(join), botQuotaCmd(quota + count)} {
+		if _, err := r.rcon.exec(ctx, c); err != nil {
+			return err
+		}
+	}
+	return nil
 }
+
+var quotaRe = regexp.MustCompile(`"bot_quota" is "(\d+)`)
 
 func (r *Room) KickBots(ctx context.Context) error {
 	_, err := r.rcon.exec(ctx, botKickCmd())
