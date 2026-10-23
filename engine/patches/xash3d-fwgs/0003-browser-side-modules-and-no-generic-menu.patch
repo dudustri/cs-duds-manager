@@ -1,5 +1,5 @@
 diff --git a/wscript b/wscript
-index de4e031d..40a9596e 100644
+index de4e031d..b54513aa 100644
 --- a/wscript
 +++ b/wscript
 @@ -129,7 +129,7 @@ def register_define(self, conf):
@@ -11,7 +11,7 @@ index de4e031d..40a9596e 100644
  
  	# engine is obligated to provide VGUI interface in 32-bit builds on Windows/Linux/Mac as shared library
  	# on platforms supported only by Xash3D FWGS, freevgui can be linked statically into client library
-@@ -394,6 +394,13 @@ def configure(conf):
+@@ -394,6 +394,14 @@ def configure(conf):
  		conf.env.append_unique('CXXFLAGS_cxxshlib', ['-fPIC', '-fno-use-cxa-atexit'])
  		conf.env.append_unique('LINKFLAGS_cshlib', ['-nostdlib', '-Wl,--unresolved-symbols=ignore-all'])
  		conf.env.append_unique('LINKFLAGS_cxxshlib', ['-nostdlib', '-Wl,--unresolved-symbols=ignore-all'])
@@ -20,6 +20,7 @@ index de4e031d..40a9596e 100644
 +	elif conf.env.DEST_OS == 'emscripten':
 +		cflags += ['-fPIC']
 +		cxxflags += ['-fPIC']
++		linkflags += ['-O2'] # Emscripten optimises (wasm-opt) and drops its debug checks only at an optimised link
 +		conf.env.append_unique('LINKFLAGS_cshlib', ['-sSIDE_MODULE=1'])
 +		conf.env.append_unique('LINKFLAGS_cxxshlib', ['-sSIDE_MODULE=1'])
  	# check if we need to use irix linkflags
