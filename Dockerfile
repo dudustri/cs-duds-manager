@@ -147,9 +147,11 @@ RUN cd third_party/cs16-client \
  && cmake --build build -j"$(nproc)"
 RUN x=third_party/xash3d-fwgs/build && c=third_party/cs16-client/build && o=/out/engine \
  && mkdir -p $o/valve $o/cstrike/cl_dlls \
- && cp $x/engine/xash $o/xash.js && cp $x/engine/xash.wasm $x/filesystem/filesystem_stdio.so $x/ref/gl/libref_gles3compat.so $o/ \
+ && cp $x/engine/xash $o/xash.js && cp $x/engine/xash.wasm $o/ \
+ && cp $x/filesystem/filesystem_stdio.so $o/filesystem_stdio.wasm && cp $x/ref/gl/libref_gles3compat.so $o/libref_gles3compat.wasm \
  && cp $x/3rdparty/extras/extras.pk3 $o/valve/extras.pk3 \
- && cp $c/cl_dll/client_emscripten_wasm32.so $c/3rdparty/mainui_cpp/menu_emscripten_wasm32.so $o/cstrike/cl_dlls/ \
+ && cp $c/cl_dll/client_emscripten_wasm32.so $o/cstrike/cl_dlls/client_emscripten_wasm32.wasm \
+ && cp $c/3rdparty/mainui_cpp/menu_emscripten_wasm32.so $o/cstrike/cl_dlls/menu_emscripten_wasm32.wasm \
  && cd third_party/cs16-client/3rdparty/cs16client-extras \
  && python3 -c 'import os,sys,zipfile; z=zipfile.ZipFile(sys.argv[1],"w",zipfile.ZIP_DEFLATED); [z.write(os.path.join(d,f)) for d,_,fs in os.walk("gfx") for f in fs]' $o/cstrike/extras.pk3
 # served under a hash of its files, so browsers may cache it forever and a rebuilt engine gets a new URL
