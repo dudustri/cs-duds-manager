@@ -26,7 +26,8 @@ and they publish no browser build of their own.
 - The Docker build compiles them with the official Emscripten image, pinned by digest.
 - Upstream's browser build is old, so it needs small fixes. Each fix is a short patch in
   `engine/patches/`, so every change to upstream code can be read and reviewed.
-- `engine/net.js` sends the engine's network traffic to our WebRTC transport.
+- `engine/browser.js` connects the engine to the page: its network traffic goes to our WebRTC
+  transport, and the page decides on fullscreen.
 - Only what the page needs is built. No server code, bots, training maps or touch controls.
 
 ### WebRTC carries the game traffic
