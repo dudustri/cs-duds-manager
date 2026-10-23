@@ -1,0 +1,6 @@
+[submodule "third_party/xash3d-fwgs"]
+	path = third_party/xash3d-fwgs
+	url = https://github.com/FWGS/xash3d-fwgs
+[submodule "third_party/cs16-client"]
+	path = third_party/cs16-client
+	url = https://github.com/FWGS/cs16-client
