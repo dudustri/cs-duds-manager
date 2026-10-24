@@ -3,7 +3,7 @@
 
 For each id it asks GameBanana's API for the map's newest download (skipping source files, prefabs and alternate
 light or seasonal versions), unpacks the archives inside a throwaway Debian container (nothing from them runs here),
-and keeps only map data files (.bsp .wad .wav .mdl .spr .tga .bmp .res .txt) in a cstrike layout:
+and keeps only map data files (.bsp .nav .wad .wav .mdl .spr .tga .bmp .res .txt) in a cstrike layout:
 extra-maps/maps/x.bsp, extra-maps/sound/..., extra-maps/x.wad. Not pinned: a re-run can bring newer versions.
 The Dockerfile adds the bundle to the community maps; maps missing a file are left out by the asset check.
 
@@ -17,7 +17,7 @@ LIST = ROOT / "server-config/gamebanana-maps.txt"
 OUT = ROOT / "extra-maps"
 WORK = ROOT / ".cache/gamebanana"
 DEBIAN = "debian:bookworm-slim@sha256:7c7b2c966bc9ee8cedfeef67e0e279108992c77681fa595db4a9d65c06ccc587"  # as in Dockerfile
-KEEP = {".bsp", ".wad", ".wav", ".mdl", ".spr", ".tga", ".bmp", ".res", ".txt"}
+KEEP = {".bsp", ".nav", ".wad", ".wav", ".mdl", ".spr", ".tga", ".bmp", ".res", ".txt"}
 DIRS = {"maps", "sound", "models", "sprites", "gfx", "overviews"}  # cstrike folders a map may bring
 SKIP = re.compile(r"source|developer|prefab|light|xmas|winter|beta", re.I)
 
@@ -83,7 +83,7 @@ def place(src, mod_dir):
     name = parts[-1]
     if name.endswith(".wad"):
         return Path(name)
-    if name.endswith((".bsp", ".res", ".txt")):
+    if name.endswith((".bsp", ".nav", ".res", ".txt")):
         return Path("maps", name)
     return None  # a loose sound or model with no folder: we can't tell where the map expects it
 

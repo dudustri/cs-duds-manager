@@ -70,8 +70,8 @@ RUN ./amxxpc gungame.sma -o../plugins/gungame.amxx \
 COPY server-config/amxx/cs_duds_votes.sma ./cs_duds_votes.sma
 RUN ./amxxpc cs_duds_votes.sma -o../plugins/cs_duds_votes.amxx \
  && test -s ../plugins/cs_duds_votes.amxx && rm cs_duds_votes.sma
-COPY server-config/amxx/cs_duds_announcer.sma server-config/amxx/cs_duds_timer.sma server-config/amxx/cs_duds_zombie.sma ./
-RUN for p in cs_duds_announcer cs_duds_timer cs_duds_zombie; do \
+COPY server-config/amxx/cs_duds_announcer.sma server-config/amxx/cs_duds_timer.sma server-config/amxx/cs_duds_zombie.sma server-config/amxx/cs_duds_navgen.sma ./
+RUN for p in cs_duds_announcer cs_duds_timer cs_duds_zombie cs_duds_navgen; do \
       ./amxxpc "$p.sma" "-o../plugins/$p.amxx" && test -s "../plugins/$p.amxx" && rm "$p.sma" || exit 1; \
     done
 # The plugin precaches these sounds, so the server tree needs them.
@@ -106,7 +106,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git ca-certific
  && test "$(git rev-parse HEAD)" = "$MAPS_COMMIT" \
  && mkdir -p /extra && cd cstrike \
  && find . -type f \( -iname '*.bsp' -o -iname '*.wad' -o -iname '*.wav' -o -iname '*.mdl' -o -iname '*.spr' -o -iname '*.tga' \
-      -o -iname '*.bmp' -o -iname '*.res' -o -iname '*.txt' \) -exec cp --parents {} /extra/ \; \
+      -o -iname '*.bmp' -o -iname '*.res' -o -iname '*.txt' -o -iname '*.nav' \) -exec cp --parents {} /extra/ \; \
  && cd /extra && find . -depth -name '*[A-Z]*' -execdir sh -c 'n=$(printf %s "$1" | tr A-Z a-z); [ -e "$n" ] || mv "$1" "$n"' _ {} \; \
  && rm -rf /mirror && test -f /extra/maps/cs_rio.bsp
 # the GameBanana bundle (scripts/fetch-gamebanana-maps; empty unless fetched) joins them, never replacing a file
@@ -192,8 +192,8 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends lib32gcc-s1 lib32stdc++6 iproute2 ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && useradd --create-home --uid 10001 --shell /usr/sbin/nologin cs \
- && mkdir -p /home/cs/.steam/sdk32 /opt/cs \
- && chown -R cs:cs /home/cs/.steam
+ && mkdir -p /home/cs/.steam/sdk32 /opt/cs/nav \
+ && chown -R cs:cs /home/cs/.steam /opt/cs/nav
 # ReHLDS fatals without Steam GS init: it looks for steamclient.so in ~/.steam/sdk32.
 COPY --from=hlds --chown=cs:cs /opt/steamcmd/linux32/steamclient.so /home/cs/.steam/sdk32/steamclient.so
 COPY --from=server --chown=cs:cs /opt/hlds /opt/hlds

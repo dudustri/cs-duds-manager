@@ -46,3 +46,11 @@ for d in modes/*/; do
 done
 
 rm -rf addons/amxmodx/scripting
+
+# bot navigation (random spawns need it, cs_duds_navgen.amxx builds it in game): a map without its own .nav gets a
+# link into the nav store, a volume in compose.yaml, so the server writes and reads it there and it survives rebuilds
+for bsp in maps/*.bsp; do
+  [ -e "$bsp" ] || continue
+  nav=${bsp%.bsp}.nav
+  [ -e "$nav" ] || ln -s "/opt/cs/nav/$(basename "$nav")" "$nav"
+done
