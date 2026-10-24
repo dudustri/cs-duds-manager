@@ -21,6 +21,8 @@ services:
       SESSION_IDLE_TIMEOUT: ${SESSION_IDLE_TIMEOUT:-}
       STATUS_EVERY: ${STATUS_EVERY:-}
       READY_TIMEOUT: ${READY_TIMEOUT:-}
+    volumes:
+      - nav:/opt/cs/nav     # bot navigation built in game (random spawns), kept across rebuilds
   caddy:
     build: { context: ., target: caddy }
     network_mode: host
@@ -28,3 +30,6 @@ services:
     depends_on: [backend]
     environment:
       SITE_ADDRESS: ${SITE_ADDRESS:-http://localhost}
+
+volumes:
+  nav:

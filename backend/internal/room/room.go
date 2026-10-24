@@ -507,6 +507,7 @@ const wedgedAfter = 2 * time.Minute
 func launchArgs(port int, mode Mode, mp Map, set Settings, rconPassword string, maxPlayers int, id string, withMaps bool) []string {
 	args := []string{
 		"-game", "cstrike", "-port", strconv.Itoa(port), "-sport", strconv.Itoa(port + 10000), "-maxplayers", strconv.Itoa(maxPlayers),
+		"-heapsize", "131072", // KB: big community maps overflow the default memory pool ("greater then free hunk")
 		"+ip", "127.0.0.1", "+rcon_password", rconPassword, "+sv_rcon_condebug", "0",
 		"+localinfo", "amxx_plugins", pluginList(mode.name),
 		"+localinfo", "amxx_configsdir", roomConfigsRel(id),

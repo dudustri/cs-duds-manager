@@ -64,7 +64,9 @@ still apply and the tests pass, then merge.
 
 ## What you get
 
-- 10 modes: classic, deathmatch, free for all, GunGame, zombie, aim, AWP, knife, surf and climb.
+- 10 modes: classic, deathmatch, free for all, GunGame, zombie, aim, AWP, knife, surf and climb. In deathmatch, free for
+  all and GunGame you respawn anywhere on the map. The first game on a map builds its bot navigation for that (a
+  minute or two, you spawn at your base meanwhile); it is kept in a Docker volume, so it happens once per map.
 - About 300 maps: the stock maps plus community maps. Special maps only show up in their own mode.
 - A lobby with quick play, a server list, a players page and a page to create a server.
 - Host controls in the game overlay: kick, bots and map votes. Chat votes with `rtv` and `/votekick`.
